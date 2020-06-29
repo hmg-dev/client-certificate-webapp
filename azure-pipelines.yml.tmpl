@@ -1,0 +1,43 @@
+pool:
+  vmImage: 'Ubuntu-18.04'
+
+trigger:
+  branches:
+    include:
+      - master
+
+variables:
+  imageName: 'pki-web'
+
+steps:
+  - task: SonarQubePrepare@4
+    inputs:
+      SonarQube: 'sonar-qube'
+      scannerMode: 'Other'
+
+  - task: Maven@3
+    inputs:
+      mavenPomFile: 'pom.xml'
+      goals: 'package'
+      publishJUnitResults: true
+      testResultsFiles: '**/surefire-reports/TEST-*.xml'
+      sonarQubeRunAnalysis: true
+
+  - task: Docker@2
+    inputs:
+      containerRegistry: 'REPLACEME'
+      repository: '$(imageName)'
+      command: 'build'
+      Dockerfile: '**/Dockerfile'
+      tags: |
+        $(Build.BuildNumber)
+        latest
+
+  - task: Docker@2
+    inputs:
+      containerRegistry: 'REPLACEME'
+      repository: '$(imageName)'
+      command: 'push'
+      tags: |
+        $(Build.BuildNumber)
+        latest

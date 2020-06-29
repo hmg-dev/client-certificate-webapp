@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>HMG PKI - Client Side Certificates</title>
+
+        <link rel="stylesheet" href="style.css">
+        <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    </head>
+
+    <body id=body>
+        <h1>HMG "Client Side Certificates" WebApp</h1>
+
+        <h2>[[#{global.welcome.headline}]] [[${user.name}]]</h2>
+
+        <div th:if="${message}" class="message">
+            <span th:text="${message}"></span>
+        </div>
+        <div th:if="${errorMessage}" class="error-message">
+            <span th:text="${errorMessage}"></span>
+        </div>
+
+        <div class="admin-link" th:if="${isAdmin}"><a href="/admin" th:text="#{global.admin.interface}"></a></div>
+
+        <div id="status-area">
+            <div id="user-data">
+                <div class="userdata.mycerts">
+                    <h2 th:text="#{user.data.mycerts.headline}"></h2>
+                    <p class="hint" th:if="${#lists.isEmpty(userCertificates)}" th:text="#{user.data.mycerts.nocerts}"></p>
+                    <p th:each="cert : ${userCertificates}">
+                        <a th:href="@{'/certs/' + ${cert}}" th:text="${cert}"></a>
+                    </p>
+                </div>
+                <div class="userdata.myreq">
+                    <h2 th:text="#{user.data.myreq.headline}"></h2>
+                    <p th:if="${#lists.isEmpty(userCSRList)}" class="hint" th:text="#{user.data.myreq.noreq}"></p>
+                    <p th:each="csr : ${userCSRList}" th:text="${csr}"></p>
+
+                    <p th:if="${not #lists.isEmpty(userRejectedCSRList)}" th:text="#{user.data.myreq.rejected}" class="rejectedCSR-headline"></p>
+                    <p th:each="rcsr : ${userRejectedCSRList}" th:text="${rcsr}" class="rejectedCSR"></p>
+
+                    <p th:if="${not #lists.isEmpty(userAcceptedCSRList)}" th:text="#{user.data.myreq.accepted}" class="acceptedCSR-headline"></p>
+                    <p th:each="acsr : ${userAcceptedCSRList}" th:text="${acsr}" class="acceptedCSR"></p>
+                </div>
+            </div>
+
+            <div id="global-info">
+                <h2 th:text="#{global.info.headline}"></h2>
+                <p th:utext="#{global.info.description.gencsr}"></p>
+                <a href="/csr-generator.zip" th:text="#{global.info.description.script.download}"></a>
+                <hr/>
+
+                <p class="hint" th:utext="#{global.info.description}"></p>
+                <code th:utext="#{global.info.description.code}"></code>
+
+            </div>
+        </div>
+
+        <hr/>
+
+        <h2 th:text="#{user.request.headline}"></h2>
+        <h3 th:text="#{user.request.description}"></h3>
+        <div id="form-area">
+            <div id="csr-file-input-area">
+                <h3 th:utext="#{user.request.via.file.upload}"></h3>
+                <form id="csr-file-form" action="#" th:action="@{/csrFile}" enctype="multipart/form-data" method="post">
+                    <input type="file" width="100%" height="50%" id="csr-file-input-id" name="file" />
+                    <input type="submit" id="upload-from-file" name="upload-from-file" th:value="#{user.request.file.upload}" />
+                </form>
+            </div>
+
+            <div id="csr-text-input-area">
+                <h3 th:utext="#{user.request.via.copy.paste}"></h3>
+                <form id="csr-text-form" action="#" th:action="@{/csrText}" method="post">
+                    <textarea id="csr-textarea" name="csrText"></textarea>
+                    <input type="submit" id="upload-from-text" name="upload-from-text" th:value="#{user.request.text.upload}" />
+                </form>
+            </div>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>HMG PKI - Client Side Certificates - ADMIN</title>
+
+        <link rel="stylesheet" href="style.css">
+        <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    </head>
+    <body id=body>
+        <div class="admin-link"><a href="/" th:text="#{admin.ui.back}"></a></div>
+
+        <h1>HMG "Client Side Certificates" ADMIN WebApp</h1>
+
+        <div th:if="${message}" class="message">
+            <span th:text="${message}"></span>
+        </div>
+        <div th:if="${errorMessage}" class="error-message">
+            <span th:text="${errorMessage}"></span>
+        </div>
+
+        <div id="pending-requests-area" class="admin-list-area">
+            <h2 th:text="#{admin.ui.requests.headline}"></h2>
+            <table id="pending-requests" class="admin-list-table">
+                <thead>
+                    <tr>
+                        <th th:text="#{admin.ui.requests.user}"></th>
+                        <th th:text="#{admin.ui.requests.date}"></th>
+                        <th th:text="#{admin.ui.requests.filename}"></th>
+                        <th th:text="#{admin.ui.requests.actions}"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${#lists.isEmpty(pendingRequests)}">
+                        <td th:colspan="4" th:text="#{admin.ui.requests.nopending}" class="no-requests"></td>
+                    </tr>
+                    <tr th:each="csr,iterStat : ${pendingRequests}">
+                        <td th:class="${iterStat.odd}?'': 'alt'" th:text="${csr.getUserName()}"></td>
+                        <td th:class="${iterStat.odd}?'': 'alt'" th:text="${#temporals.format(csr.getLastModified(), 'dd-MM-yyyy HH:mm')}"></td>
+                        <td th:class="${iterStat.odd}?'': 'alt'">
+                            <div class="tooltip-parent">
+                                [[${csr.getCsrFile().getFileName().toString()}]]
+                                <div class="tooltip-content" th:utext="${#strings.replace(csr.getCsrInfo(),',','<br/>')}"></div>
+                            </div>
+                        </td>
+                        <td th:class="${iterStat.odd}?'actions': 'alt actions'">
+                            <form action="#" th:action="@{/rejectCSR}" method="post" class="reject-form">
+                                <input type="hidden" name="userName" th:value="${csr.getUserName()}" />
+                                <input type="hidden" name="fileName" th:value="${csr.getCsrFile().getFileName().toString()}" />
+                                <input type="submit" name="reject" th:value="#{admin.ui.requests.action.reject}" />
+                            </form>
+                            <form action="#" th:action="@{/signCSR}" method="post">
+                                PW: <input type="password" name="cryptPassword" class="crypt-pwd-field" />
+                                Key: <input type="password" name="keyPassword" class="crypt-pwd-field" />
+                                <input type="hidden" name="userName" th:value="${csr.getUserName()}" />
+                                <input type="hidden" name="fileName" th:value="${csr.getCsrFile().getFileName().toString()}" />
+                                <input type="submit" name="sign" th:value="#{admin.ui.requests.action.sign}" />
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="signed-certificates-area" class="admin-list-area">
+            <h2 th:text="#{admin.ui.signed.headline}"></h2>
+            <table id="signed-certificates" class="admin-list-table">
+                <thead>
+                    <tr>
+                        <th th:text="#{admin.ui.requests.user}"></th>
+                        <th th:text="#{admin.ui.requests.date}"></th>
+                        <th th:text="#{admin.ui.requests.filename}"></th>
+                        <th th:text="#{admin.ui.requests.actions}"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${#lists.isEmpty(signedRequests)}">
+                        <td th:colspan="4" th:text="#{admin.ui.signed.nosigned}" class="no-requests"></td>
+                    </tr>
+                    <tr th:each="crt,iterStat : ${signedRequests}">
+                        <td th:class="${iterStat.odd}?'': 'alt'" th:text="${crt.getUserName()}"></td>
+                        <td th:class="${iterStat.odd}?'': 'alt'" th:text="${#temporals.format(crt.getLastModified(), 'dd-MM-yyyy HH:mm')}"></td>
+                        <td th:class="${iterStat.odd}?'': 'alt'">
+                            <div class="tooltip-parent">
+                                [[${crt.getCsrFile().getFileName().toString()}]]
+                                <div class="tooltip-content" th:utext="${#strings.replace(crt.getCsrInfo(),',','<br/>')}"></div>
+                            </div>
+                        </td>
+                        <td th:class="${iterStat.odd}?'actions': 'alt actions'">
+                            <form action="#" th:action="@{/revokeCert}" method="post">
+                                PW: <input type="password" name="cryptPassword" class="crypt-pwd-field" />
+                                Key: <input type="password" name="keyPassword" class="crypt-pwd-field" />
+                                <input type="hidden" name="userName" th:value="${crt.getUserName()}" />
+                                <input type="hidden" name="fileName" th:value="${crt.getCsrFile().getFileName().toString()}" />
+                                <input type="submit" name="revoke" th:value="#{admin.ui.signed.action.revoke}" />
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,293 @@
+body {
+    font-family: sans;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: 2px;
+}
+
+h1 {
+    text-align: center;
+    font-family: sans;
+    color: #303a74;
+}
+
+a {
+    text-decoration: none;
+    color: blue;
+}
+
+hr {
+    width: 100%;
+}
+
+.tooltip-parent {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip-parent .tooltip-content {
+    visibility: hidden;
+    width: 420px;
+    background-color: #474747;
+    color: #fff;
+    padding: 5px 0;
+    border-radius: 6px;
+
+    /* Position the tooltip text - see examples below! */
+    position: absolute;
+    z-index: 1;
+}
+
+.tooltip-parent:hover .tooltip-content {
+    visibility: visible;
+}
+
+.fsPathText {
+    color: #c67838;
+}
+
+.rejectedCSR {
+    color: crimson;
+    text-decoration: line-through;
+}
+
+.rejectedCSR-headline {
+    margin-bottom: 0;
+    font-size: 0.7em;
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+.acceptedCSR {
+    color:#59c600;
+    font-weight: bold;
+}
+
+.acceptedCSR-headline {
+    margin-bottom: 0;
+    font-size: 0.7em;
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+.message {
+    width:90%;
+    background-color: greenyellow;
+    border: 1px solid green;
+    padding: 5px;
+    font-weight: bold;
+    text-align: center;
+    vertical-align: middle;
+    margin-bottom: 15px;
+    border-radius: 5px;
+}
+
+.error-message {
+    width:90%;
+    background-color: salmon;
+    border: 1px solid red;
+    padding: 5px;
+    font-weight: bold;
+    text-align: center;
+    vertical-align: middle;
+    margin-bottom: 15px;
+    border-radius: 5px;
+}
+
+.admin-link {
+    float: left;
+    top: 0;
+    position: fixed;
+    right: 20px;
+}
+
+.admin-list-area {
+    width: 100%;
+    margin-top: 25px;
+}
+
+.admin-list-table {
+    width: 100%;
+}
+
+.admin-list-table thead tr th {
+    border-bottom: 1px solid black;
+    background-color: #fff8de;
+}
+
+.admin-list-table tbody tr td {
+    padding: 5px;
+}
+
+.admin-list-table tbody tr td.alt {
+    background-color: #f8f7f2;
+}
+
+.admin-list-table .actions {
+    width: 30%;
+}
+
+.admin-list-table .no-requests {
+    text-align: center;
+}
+
+.admin-list-table .crypt-pwd-field {
+    width: 120px;
+}
+
+#pending-requests .reject-form {
+    float: left;
+    padding-right: 5px;
+    margin-right: 5px;
+    border-right: 1px solid blue;
+}
+
+#status-area {
+    width: 100%;
+    display: flex;
+    flex-basis: 50%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+#user-data {
+    width: 100%;
+    display: flex;
+    flex-basis: 50%;
+    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: center;
+    background-color: #f8f7f2;
+}
+
+#global-info {
+    width: 48%;
+    background-color: #fff8de;
+    padding: 5px;
+    padding-left: 10px;
+}
+
+#form-area {
+    width: 100%;
+    display: flex;
+    flex-basis: 50%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+#csr-file-input-area {
+    width: 100%;
+    display: flex;
+    flex-basis: 45%;
+    flex-direction: column;
+    flex-wrap: wrap;
+    padding-right: 10px;
+    padding-left: 30px;
+}
+
+#csr-file-input-area h3 {
+    color: #303a74;
+}
+
+#csr-file-input-area:hover {
+    background-color: #fff8de;
+}
+
+
+#csr-text-input-area {
+    width: 100%;
+    display: flex;
+    flex-basis: 45%;
+    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-left: 10px;
+    padding-right: 30px;
+    border-left: 1px solid gray;
+}
+
+#csr-text-input-area h3 {
+    color: #303a74;
+}
+
+#csr-text-input-area:hover {
+    background-color: #fff8de;
+}
+
+#csr-textarea {
+    width: 100%;
+    height: 150px;
+}
+
+.hint {
+    font-size: 0.8em;
+    font-weight: normal;
+    font-style: italic;
+    color: #949494;
+}
+
+h2 {
+    font-weight: bold;
+    font-size: 1.3em;
+}
+
+#article-flag-products ul {
+    list-style-type: none;
+}
+#article-flag-products ul li {
+    font-size: 1.2em;
+    margin-top: 5px;
+}
+
+#article-flag-products li.alt {
+    background-color: #dedede;
+}
+
+#article-flag-buttons {
+    margin-top: 20px;
+}
+#article-flag-buttons input {
+    font-size: 1.5em;
+    padding: 10px;
+}
+#save {
+    background-color: #59c600;
+    color: white;
+    font-weight: bold;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    cursor: pointer;
+    border-radius: 6px;
+    box-shadow: 2px 2px 5px grey;
+}
+#save:hover {
+    background-color: #65e100;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    cursor: pointer;
+    border-radius: 6px;
+    box-shadow: 0px 0px 1px #777;
+}
+
+#revoke {
+    background-color: #bc3e00;
+    color: white;
+    font-weight: bold;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    cursor: pointer;
+    border-radius: 6px;
+    box-shadow: 2px 2px 5px grey;
+}
+#revoke:hover {
+    background-color: #ff5500;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    cursor: pointer;
+    border-radius: 6px;
+    box-shadow: 0px 0px 1px #777;
+}
