@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.FileTime;
 import java.util.function.BiPredicate;
 import java.util.stream.Stream;
 
@@ -67,5 +68,14 @@ public class WrapperFilesService implements FilesService {
     public Path createDirectories(Path dir, FileAttribute<?>... attrs) throws IOException {
         return Files.createDirectories(dir, attrs);
     }
-
+    
+    @Override
+    public Path createFile(Path path, FileAttribute<?>... attrs) throws IOException {
+        return Files.createFile(path, attrs);
+    }
+    
+    @Override
+    public Path setLastModifiedTime(Path path, FileTime time) throws IOException {
+        return Files.setLastModifiedTime(path, time);
+    }
 }

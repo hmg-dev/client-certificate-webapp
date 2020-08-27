@@ -27,12 +27,14 @@ public class CSR {
     private final String userName;
     private final Path csrFile;
     private final Temporal lastModified;
+    private final Temporal lastRenewed;
     private final String csrInfo;
 
     private CSR(final Builder b) {
         userName = b.userName;
         csrFile = b.csrFile;
         lastModified = b.lastModified;
+        lastRenewed = b.lastRenewed;
         csrInfo = b.csrInfo;
     }
 
@@ -51,11 +53,16 @@ public class CSR {
     public Temporal getLastModified() {
         return lastModified;
     }
-
+    
+    public Temporal getLastRenewed() {
+        return lastRenewed;
+    }
+    
     public static class Builder {
         private String userName;
         private Path csrFile;
         private Temporal lastModified;
+        private Temporal lastRenewed;
         private String csrInfo;
 
         public CSR build() {
@@ -79,6 +86,11 @@ public class CSR {
 
         public Builder lastModified(final Temporal lastModified) {
             this.lastModified = lastModified;
+            return this;
+        }
+    
+        public Builder lastRenewed(final Temporal lastRenewed) {
+            this.lastRenewed = lastRenewed;
             return this;
         }
     }

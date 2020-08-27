@@ -26,14 +26,20 @@
         <div id="status-area">
             <div id="user-data">
                 <div class="userdata.mycerts">
-                    <h2 th:text="#{user.data.mycerts.headline}"></h2>
+                    <div>
+                        <img src="certs.png" alt="" th:width="25px" style="float: left; vertical-align: middle;  margin-right: 10px;" />
+                        <h2 th:text="#{user.data.mycerts.headline}"></h2>
+                    </div>
                     <p class="hint" th:if="${#lists.isEmpty(userCertificates)}" th:text="#{user.data.mycerts.nocerts}"></p>
                     <p th:each="cert : ${userCertificates}">
                         <a th:href="@{'/certs/' + ${cert}}" th:text="${cert}"></a>
                     </p>
                 </div>
                 <div class="userdata.myreq">
-                    <h2 th:text="#{user.data.myreq.headline}"></h2>
+                    <div>
+                        <img src="cert-request.png" alt="" th:width="25px" style="float: left; vertical-align: middle;  margin-right: 10px;" />
+                        <h2 th:text="#{user.data.myreq.headline}"></h2>
+                    </div>
                     <p th:if="${#lists.isEmpty(userCSRList)}" class="hint" th:text="#{user.data.myreq.noreq}"></p>
                     <p th:each="csr : ${userCSRList}" th:text="${csr}"></p>
 

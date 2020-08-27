@@ -161,6 +161,7 @@ hr {
     flex-wrap: wrap;
     justify-content: center;
     background-color: #f8f7f2;
+    padding-left: 10px;
 }
 
 #global-info {
@@ -254,7 +255,8 @@ h2 {
     font-size: 1.5em;
     padding: 10px;
 }
-#save {
+
+.renew-button {
     background-color: #59c600;
     color: white;
     font-weight: bold;
@@ -264,7 +266,7 @@ h2 {
     border-radius: 6px;
     box-shadow: 2px 2px 5px grey;
 }
-#save:hover {
+.renew-button:hover {
     background-color: #65e100;
     -moz-border-radius: 5px;
     -webkit-border-radius: 5px;
@@ -273,7 +275,7 @@ h2 {
     box-shadow: 0px 0px 1px #777;
 }
 
-#revoke {
+.revoke-button {
     background-color: #bc3e00;
     color: white;
     font-weight: bold;
@@ -283,11 +285,51 @@ h2 {
     border-radius: 6px;
     box-shadow: 2px 2px 5px grey;
 }
-#revoke:hover {
+.revoke-button:hover {
     background-color: #ff5500;
     -moz-border-radius: 5px;
     -webkit-border-radius: 5px;
     cursor: pointer;
     border-radius: 6px;
     box-shadow: 0px 0px 1px #777;
+}
+
+.action-button-popup {
+    float: right;
+    margin-top: 15px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
+}
+
+.action-popup {
+    visibility: hidden;
+    position: absolute;
+    display: inline-block;
+    width: 450px;
+    background-color: #474747;
+    color: #fff;
+    padding: 5px 0;
+    border-radius: 6px;
+    z-index: 1;
+    min-height: 80px;
+}
+
+.pw-label {
+    width:55%;
+    float:left;
+    padding-left: 3px;
+}
+
+.close-button {
+    position: absolute;
+    right: 10px;
+    border: 1px solid;
+    padding-bottom: 2px;
+    padding-left: 4px;
+    padding-right: 4px;
+    font-weight: bold;
 }

@@ -165,7 +165,7 @@ public class DefaultCertificateServiceTest {
         Path expectedSource = dummyStoragePath.resolve("users").resolve(userName).resolve(csrFileName);
         Path expectedPath = dummyStoragePath.resolve("cert-repo/intermediate/csr").resolve(csrFileName);
 
-        doThrow(new FileAlreadyExistsException("TEST")).when(filesService).copy(expectedSource, expectedPath);
+        doThrow(new FileAlreadyExistsException("TEST")).when(filesService).copy(expectedSource, expectedPath, StandardCopyOption.REPLACE_EXISTING);
         sut.copyUserCSRToRepository(userName, csrFileName);
     }
 
@@ -180,7 +180,7 @@ public class DefaultCertificateServiceTest {
         assertNotNull(csrInRepo);
         assertEquals(expectedPath, csrInRepo);
 
-        verify(filesService, times(1)).copy(expectedSource, expectedPath);
+        verify(filesService, times(1)).copy(expectedSource, expectedPath, StandardCopyOption.REPLACE_EXISTING);
     }
 
     @Test

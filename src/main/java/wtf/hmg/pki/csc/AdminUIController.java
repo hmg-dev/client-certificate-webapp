@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import wtf.hmg.pki.csc.model.CSR;
+import wtf.hmg.pki.csc.model.CertInfo;
 import wtf.hmg.pki.csc.service.AdminDataService;
 import wtf.hmg.pki.csc.service.CertificateService;
 import wtf.hmg.pki.csc.service.CryptService;
@@ -61,9 +62,11 @@ public class AdminUIController {
     public String adminPage(final Model model, final OAuth2AuthenticationToken auth) {
         List<CSR> pendingRequests = adminDataService.findPendingCertificateRequests();
         List<CSR> signedRequests = adminDataService.findSignedCertificateRequests();
+        List<CertInfo> revokedCerts = adminDataService.findRevokedCertificates();
 
         model.addAttribute("pendingRequests", pendingRequests);
         model.addAttribute("signedRequests", signedRequests);
+        model.addAttribute("revokedCerts", revokedCerts);
         model.addAttribute("user", auth.getPrincipal());
 
         return "adminPage";
@@ -119,7 +122,44 @@ public class AdminUIController {
         adminDataService.acceptUserCSR(userName, fileName);
         certificateService.commitAndPushChanges(operatingUser, "Signed User-Certificate");
     }
-
+    
+    @PostMapping("/renewCert")
+    @PreAuthorize("hasRole('DevOps')")
+    public String renewCert(final String userName, final String fileName, final String cryptPassword,
+                            final String keyPassword, final RedirectAttributes redirectAttributes, final OAuth2AuthenticationToken auth) {
+        String operatingUser = auth.getPrincipal().getName();
+        if(!lock.tryLock()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Concurrent access prevented! Try again in a minute.");
+            return "redirect:/admin";
+        }
+        
+        try {
+            prepareWorkspace(cryptPassword);
+            
+            String user = CscUtils.normalizeUserName(userName);
+            Path cert = findUserCertForRequest(user, fileName);
+            cryptService.revokeCertificate(cert, keyPassword);
+            adminDataService.flagRevokedUserCert(user, fileName);
+            
+            Path csr = adminDataService.findAcceptedCSR(user, fileName);
+            Path certFile = cryptService.signCertificateRequest(csr, keyPassword);
+            certificateService.copyCertificateToUserDirectory(user, certFile);
+            adminDataService.flagCSRasRenewed(csr);
+    
+            certificateService.encryptWorkingFiles(cryptPassword);
+            certificateService.commitAndPushChanges(operatingUser, "Renew User-Certificate"); // TODO: how to show the user, that the cert has been renewed?
+    
+            redirectAttributes.addFlashAttribute("message", "Certificate has been successfully renewed!");
+        } catch (GitAPIException | IOException | IllegalStateException e) {
+            log.error("Unable to renew certificate!", e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Something went horribly wrong! Unable to execute RENEW-operation! Error was: " + e.getMessage());
+        } finally {
+            lock.unlock();
+        }
+    
+        return "redirect:/admin";
+    }
+    
     @PostMapping("/revokeCert")
     @PreAuthorize("hasRole('DevOps')")
     public String revokeCert(final String userName, final String fileName, final String cryptPassword,
@@ -133,7 +173,7 @@ public class AdminUIController {
         try {
             prepareWorkspace(cryptPassword);
             Path cert = findUserCertForRequest(CscUtils.normalizeUserName(userName), fileName);
-            cryptService.revokeCertificate(cert, keyPassword); // re-generate CRL?
+            cryptService.revokeCertificate(cert, keyPassword);
             adminDataService.flagRevokedUserCertAndCSR(CscUtils.normalizeUserName(userName), fileName);
             certificateService.encryptWorkingFiles(cryptPassword);
             certificateService.commitAndPushChanges(operatingUser, "Revoked User-Certificate");

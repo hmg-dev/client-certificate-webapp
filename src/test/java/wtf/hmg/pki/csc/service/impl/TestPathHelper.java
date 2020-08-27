@@ -32,6 +32,7 @@ public class TestPathHelper {
         Path user1ac = user1.resolve("accepted");
         Path user1rc = user1.resolve("rejected");
         Path user1certs = user1.resolve("certs");
+        Path user1revoked = user1.resolve("revoked");
         Path caCert = dummyStoragePath.resolve("intermediate.cert.pem");
 
         Files.createDirectory(users);
@@ -39,10 +40,13 @@ public class TestPathHelper {
         Files.createDirectory(user1ac);
         Files.createDirectory(user1rc);
         Files.createDirectory(user1certs);
+        Files.createDirectory(user1revoked);
         Files.write(user1.resolve("user1.csr.pem"), "DUMMY-CSR".getBytes());
         Files.write(user1ac.resolve("user1-ac.csr.pem"), "DUMMY-CSR Accepted".getBytes());
+        Files.write(user1ac.resolve("user1-ac.csr.pem.renewed"), "1".getBytes());
         Files.write(user1rc.resolve("user1-rc.csr.pem"), "DUMMY-CSR Rejected".getBytes());
         Files.write(user1certs.resolve("user1.crt.pem"), "DUMMY-CERT".getBytes());
+        Files.write(user1revoked.resolve("user1.crt.pem"), "DUMMY-CERT".getBytes());
         Files.write(caCert, "DUMMY CA-CERT".getBytes());
 
         Files.write(users.resolve("user2/user2.crs.pem"), "user2-DUMMY-CRS".getBytes());

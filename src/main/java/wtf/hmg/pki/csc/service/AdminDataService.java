@@ -20,6 +20,7 @@
 package wtf.hmg.pki.csc.service;
 
 import wtf.hmg.pki.csc.model.CSR;
+import wtf.hmg.pki.csc.model.CertInfo;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -29,12 +30,20 @@ public interface AdminDataService {
     List<CSR> findPendingCertificateRequests();
 
     List<CSR> findSignedCertificateRequests();
-
-    Path findUserCertForRequest(String userName, String fileName);
-
-    void flagRevokedUserCertAndCSR(String userName, String fileName) throws IOException;
+	
+	List<CertInfo> findRevokedCertificates();
+	
+	Path findAcceptedCSR(String userName, String fileName);
+	
+	Path findUserCertForRequest(String userName, String fileName);
+	
+	void flagRevokedUserCert(String userName, String fileName) throws IOException;
+	
+	void flagRevokedUserCertAndCSR(String userName, String fileName) throws IOException;
 
     void rejectUserCSR(String userName, String fileName) throws IOException;
 
     void acceptUserCSR(String userName, String fileName) throws IOException;
+	
+	void flagCSRasRenewed(Path csrFile) throws IOException;
 }

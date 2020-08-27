@@ -31,6 +31,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.ui.Model;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import wtf.hmg.pki.csc.model.CSR;
+import wtf.hmg.pki.csc.model.CertInfo;
 import wtf.hmg.pki.csc.service.AdminDataService;
 import wtf.hmg.pki.csc.service.CertificateService;
 import wtf.hmg.pki.csc.service.CryptService;
@@ -68,7 +69,18 @@ public class AdminUIControllerTest {
     private Model model;
     @Mock
     private ReentrantLock lock;
-
+    
+    private String userName = "user@Name";
+    private String expectedUsername = "user_Name";
+    private String fileName = "fileName";
+    private String cryptPassword = "NARF";
+    private String keyPassword = "ZORT";
+    private String adminName = "Pinky";
+    @Mock
+    private Path csrRepoFile;
+    @Mock
+    private Path certFile;
+    
     @Before
     public void setUp() {
         sut = new AdminUIController();
@@ -84,9 +96,11 @@ public class AdminUIControllerTest {
     public void testAdminPage() {
         List<CSR> dummyPendingRequests = Collections.emptyList();
         List<CSR> dummySignedRequests = Collections.emptyList();
+        List<CertInfo> dummyRevokedCerts = Collections.emptyList();
 
         given(adminDataService.findPendingCertificateRequests()).willReturn(dummyPendingRequests);
         given(adminDataService.findSignedCertificateRequests()).willReturn(dummySignedRequests);
+        given(adminDataService.findRevokedCertificates()).willReturn(dummyRevokedCerts);
 
         String result = sut.adminPage(model, auth);
 
@@ -97,15 +111,15 @@ public class AdminUIControllerTest {
         verify(model, times(1)).addAttribute("user", user);
         verify(model, times(1)).addAttribute("pendingRequests", dummyPendingRequests);
         verify(model, times(1)).addAttribute("signedRequests", dummySignedRequests);
+        verify(model, times(1)).addAttribute("revokedCerts", dummyRevokedCerts);
         verify(adminDataService, times(1)).findPendingCertificateRequests();
         verify(adminDataService, times(1)).findSignedCertificateRequests();
+        verify(adminDataService, times(1)).findRevokedCertificates();
     }
 
     @Test
     public void testRejectUserCSRForError() throws IOException {
         String userName = "userName";
-        String fileName = "fileName";
-
         doThrow(new IOException("TEST")).when(adminDataService).rejectUserCSR(anyString(), anyString());
 
         String result = sut.rejectUserCSR(userName, fileName, redirectAttributes);
@@ -120,7 +134,6 @@ public class AdminUIControllerTest {
     @Test
     public void testRejectUserCSR() throws IOException {
         String userName = "userName";
-        String fileName = "fileName";
         String result = sut.rejectUserCSR(userName, fileName, redirectAttributes);
 
         assertNotNull(result);
@@ -134,10 +147,6 @@ public class AdminUIControllerTest {
     @Test
     public void testSignCSRForError() throws GitAPIException, IOException {
         String userName = "userName";
-        String fileName = "fileName";
-        String cryptPassword = "NARF";
-        String keyPassword = "ZORT";
-
         given(lock.tryLock()).willReturn(true);
         doThrow(new TransportException("TEST")).when(certificateService).cloneCertificateRepository();
 
@@ -153,10 +162,6 @@ public class AdminUIControllerTest {
     @Test
     public void testSignCSRForRuntimeError() throws GitAPIException, IOException {
         String userName = "userName";
-        String fileName = "fileName";
-        String cryptPassword = "NARF";
-        String keyPassword = "ZORT";
-
         given(lock.tryLock()).willReturn(true);
         doThrow(new IllegalStateException("TEST")).when(certificateService).decryptWorkingFiles(anyString());
 
@@ -188,15 +193,6 @@ public class AdminUIControllerTest {
 
     @Test
     public void testSignCSR() throws GitAPIException, IOException {
-        String userName = "user@Name";
-        String expectedUsername = "user_Name";
-        String fileName = "fileName";
-        String cryptPassword = "NARF";
-        String keyPassword = "ZORT";
-        Path csrRepoFile = mock(Path.class);
-        Path certFile = mock(Path.class);
-        String adminName = "Pinky";
-
         given(lock.tryLock()).willReturn(true);
         given(certificateService.copyUserCSRToRepository(expectedUsername, fileName)).willReturn(csrRepoFile);
         given(cryptService.signCertificateRequest(csrRepoFile, keyPassword)).willReturn(certFile);
@@ -207,9 +203,7 @@ public class AdminUIControllerTest {
         assertEquals("redirect:/admin", result);
 
         verify(lock, times(1)).tryLock();
-        verify(certificateService, times(1)).cleanupWorkingFiles();
-        verify(certificateService, times(1)).cloneCertificateRepository();
-        verify(certificateService, times(1)).decryptWorkingFiles(cryptPassword);
+        verifyPrepareWorkspace();
         verify(certificateService, times(1)).copyUserCSRToRepository(expectedUsername, fileName);
         verify(cryptService, times(1)).signCertificateRequest(csrRepoFile, keyPassword);
         verify(certificateService, times(1)).copyCertificateToUserDirectory(expectedUsername, certFile);
@@ -224,6 +218,66 @@ public class AdminUIControllerTest {
         verify(redirectAttributes, times(1)).addFlashAttribute(eq("message"), anyString());
     }
 
+    @Test
+    public void testRenewCert_IOError() throws IOException, GitAPIException {
+        given(lock.tryLock()).willReturn(true);
+        doThrow(new IOException("TEST")).when(certificateService).decryptWorkingFiles(anyString());
+        
+        String result = sut.renewCert("username", "filename", "cryptPassword", "keyPassword", redirectAttributes, auth);
+        assertNotNull(result);
+        assertEquals("redirect:/admin", result);
+    
+        verify(certificateService, times(1)).cleanupWorkingFiles();
+        verify(certificateService, times(1)).cloneCertificateRepository();
+        verify(redirectAttributes, times(1)).addFlashAttribute(eq("errorMessage"), anyString());
+        verify(lock, times(1)).unlock();
+    }
+    
+    @Test
+    public void testRenewCert_WorkspaceLocked() {
+        given(lock.tryLock()).willReturn(false);
+        
+        String result = sut.renewCert("username", "filename", "cryptPassword", "keyPassword", redirectAttributes, auth);
+        assertNotNull(result);
+        assertEquals("redirect:/admin", result);
+    
+        verifyNoInteractions(certificateService, adminDataService, cryptService);
+        verify(lock, times(1)).tryLock();
+        verify(lock, never()).unlock();
+    
+        verify(redirectAttributes, times(1)).addFlashAttribute(eq("errorMessage"), anyString());
+        verify(redirectAttributes, never()).addFlashAttribute(eq("message"), anyString());
+    }
+    
+    @Test
+    public void testRenewCert() throws IOException, GitAPIException {
+        Path newCertFile = mock(Path.class);
+        given(lock.tryLock()).willReturn(true);
+        given(user.getName()).willReturn(adminName);
+        given(adminDataService.findUserCertForRequest(expectedUsername, fileName)).willReturn(certFile);
+        given(adminDataService.findAcceptedCSR(expectedUsername, fileName)).willReturn(csrRepoFile);
+        given(cryptService.signCertificateRequest(any(Path.class), anyString())).willReturn(newCertFile);
+    
+        String result = sut.renewCert(userName, fileName, cryptPassword, keyPassword, redirectAttributes, auth);
+        assertNotNull(result);
+        assertEquals("redirect:/admin", result);
+    
+        verify(lock, times(1)).tryLock();
+        verify(lock, times(1)).unlock();
+        verify(user, times(1)).getName();
+        verifyPrepareWorkspace();
+        verify(adminDataService, times(1)).findUserCertForRequest(expectedUsername, fileName);
+        verify(cryptService, times(1)).revokeCertificate(certFile, keyPassword);
+        verify(adminDataService, times(1)).flagRevokedUserCert(expectedUsername, fileName);
+        verify(adminDataService, times(1)).findAcceptedCSR(expectedUsername, fileName);
+        verify(cryptService, times(1)).signCertificateRequest(csrRepoFile, keyPassword);
+        verify(adminDataService, times(1)).flagCSRasRenewed(csrRepoFile);
+        verify(certificateService, times(1)).copyCertificateToUserDirectory(expectedUsername, newCertFile);
+        verify(certificateService, times(1)).encryptWorkingFiles(cryptPassword);
+        verify(certificateService, times(1)).commitAndPushChanges(adminName, "Renew User-Certificate");
+        verify(redirectAttributes, times(1)).addFlashAttribute(eq("message"), anyString());
+    }
+    
     @Test
     public void testRevokeCertForIOError() throws IOException, GitAPIException {
         given(lock.tryLock()).willReturn(true);
@@ -276,14 +330,6 @@ public class AdminUIControllerTest {
 
     @Test
     public void testRevokeCert() throws IOException, GitAPIException {
-        String userName = "user@Name";
-        String expectedUsername = "user_Name";
-        String fileName = "fileName";
-        String cryptPassword = "NARF";
-        String keyPassword = "ZORT";
-        Path certFile = mock(Path.class);
-        String adminName = "Pinky";
-
         given(lock.tryLock()).willReturn(true);
         given(user.getName()).willReturn(adminName);
         given(adminDataService.findUserCertForRequest(expectedUsername, fileName)).willReturn(certFile);
@@ -294,9 +340,7 @@ public class AdminUIControllerTest {
 
         verify(lock, times(1)).tryLock();
         verify(lock, times(1)).unlock();
-        verify(certificateService, times(1)).cleanupWorkingFiles();
-        verify(certificateService, times(1)).cloneCertificateRepository();
-        verify(certificateService, times(1)).decryptWorkingFiles(cryptPassword);
+        verifyPrepareWorkspace();
         verify(adminDataService, times(1)).findUserCertForRequest(expectedUsername, fileName);
         verify(cryptService, times(1)).revokeCertificate(certFile, keyPassword);
         verify(adminDataService, times(1)).flagRevokedUserCertAndCSR(expectedUsername, fileName);
@@ -305,6 +349,12 @@ public class AdminUIControllerTest {
 
         verify(redirectAttributes, never()).addFlashAttribute(eq("errorMessage"), anyString());
         verify(redirectAttributes, times(1)).addFlashAttribute(eq("message"), anyString());
+    }
+    
+    private void verifyPrepareWorkspace() throws IOException, GitAPIException {
+        verify(certificateService, times(1)).cleanupWorkingFiles();
+        verify(certificateService, times(1)).cloneCertificateRepository();
+        verify(certificateService, times(1)).decryptWorkingFiles(cryptPassword);
     }
 
 }

@@ -31,12 +31,14 @@ import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.util.FileSystemUtils;
 import wtf.hmg.pki.csc.config.AppConfig;
 import wtf.hmg.pki.csc.model.CSR;
+import wtf.hmg.pki.csc.model.CertInfo;
 import wtf.hmg.pki.csc.service.FilesService;
 import wtf.hmg.pki.csc.util.CscUtilsTest;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.function.BiPredicate;
 
@@ -57,7 +59,12 @@ public class DefaultAdminDataServiceTest {
     @Mock
     private FilesService filesService;
     private FilesService realFilesService;
-
+    
+    @Mock
+    private BasicFileAttributes attributes;
+    @Mock
+    private BasicFileAttributes invalidAttributes;
+    
     @Captor
     private ArgumentCaptor<BiPredicate<Path, BasicFileAttributes>> matcherCaptor;
 
@@ -75,6 +82,9 @@ public class DefaultAdminDataServiceTest {
 
         sut = new DefaultAdminDataService();
         sut.setAppConfig(appConfig);
+    
+        given(attributes.isRegularFile()).willReturn(true);
+        given(invalidAttributes.isRegularFile()).willReturn(false);
     }
 
     @Test
@@ -101,12 +111,6 @@ public class DefaultAdminDataServiceTest {
      * @param fileMatcher
      */
     private void testIsSignedCSRFile(final BiPredicate<Path, BasicFileAttributes> fileMatcher) {
-        BasicFileAttributes attributes = mock(BasicFileAttributes.class);
-        BasicFileAttributes invalidAttributes = mock(BasicFileAttributes.class);
-
-        given(attributes.isRegularFile()).willReturn(true);
-        given(invalidAttributes.isRegularFile()).willReturn(false);
-
         assertFalse(fileMatcher.test(Paths.get("/tmp/request.csr"), attributes));
         assertTrue(fileMatcher.test(Paths.get("/tmp/accepted/request.csr"), attributes));
         assertFalse(fileMatcher.test(Paths.get("/tmp/request.pem"), attributes));
@@ -130,10 +134,57 @@ public class DefaultAdminDataServiceTest {
             assertNotEquals("accepted", result.get(i).getUserName());
             assertNotNull(result.get(i).getCsrFile());
             assertNotNull(result.get(i).getLastModified());
+            assertNotNull(result.get(i).getLastRenewed());
             assertTrue(Files.exists(result.get(i).getCsrFile()));
         }
     }
-
+    
+    
+    @Test
+    public void testFindRevokedCertificatesForIOError() throws IOException {
+        doThrow(new IOException("TEST")).when(filesService).find(any(Path.class), anyInt(), any());
+        
+        sut.setFilesService(filesService);
+        List<CertInfo> result = sut.findRevokedCertificates();
+        
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        
+        verify(filesService, times(1)).find(any(Path.class), eq(3), matcherCaptor.capture());
+        
+        BiPredicate<Path, BasicFileAttributes> fileMatcher = matcherCaptor.getValue();
+        assertNotNull(fileMatcher);
+        testIsRevokedCertFile(fileMatcher);
+    }
+    
+    private void testIsRevokedCertFile(final BiPredicate<Path, BasicFileAttributes> fileMatcher) {
+        assertTrue(fileMatcher.test(Paths.get("/tmp/revoked/cert.crt.pem"), attributes));
+        assertTrue(fileMatcher.test(Paths.get("/tmp/revoked/cert.crt"), attributes));
+        
+        assertFalse(fileMatcher.test(Paths.get("/tmp/request.csr"), attributes));
+        assertFalse(fileMatcher.test(Paths.get("/tmp/revoked/cert.crt.pem"), invalidAttributes));
+        assertFalse(fileMatcher.test(Paths.get("/tmp/revoked/request.csr"), attributes));
+    }
+    
+    @Test
+    public void testFindRevokedCertificates() {
+        int expectedCertAmount = 1;
+        
+        sut.setFilesService(realFilesService);
+        List<CertInfo> result = sut.findRevokedCertificates();
+        assertNotNull(result);
+        assertEquals(expectedCertAmount, result.size());
+        
+        for(int i=0; i<expectedCertAmount; i++) {
+            assertNotNull(result.get(i));
+            assertNotNull(result.get(i).getUserName());
+            assertNotEquals("revoked", result.get(i).getUserName());
+            assertNotNull(result.get(i).getCertFile());
+            assertNotNull(result.get(i).getLastModified());
+            assertTrue(Files.exists(result.get(i).getCertFile()));
+        }
+    }
+    
     @Test
     public void testFindPendingCertificateRequestsForIOError() throws IOException {
         doThrow(new IOException("TEST")).when(filesService).find(any(Path.class), anyInt(), any());
@@ -260,13 +311,52 @@ public class DefaultAdminDataServiceTest {
         assertEquals(expectedResult, result);
     }
 
+    @Test
+    public void testFindAcceptedCSR() {
+        String userName = "user1";
+        String fileName = "user1.csr.pem";
+        Path expectedResult = dummyStoragePath.resolve("users").resolve(userName).resolve("accepted/user1.csr.pem");
+    
+        sut.setFilesService(realFilesService);
+        Path result = sut.findAcceptedCSR(userName, fileName);
+        assertNotNull(result);
+        assertEquals(expectedResult, result);
+    }
+    
+    @Test(expected = NullPointerException.class)
+    public void testFlagRevokedUserCert_NoCertFile() throws IOException {
+        given(filesService.exists(any(Path.class))).willReturn(false);
+    
+        sut.setFilesService(filesService);
+        sut.flagRevokedUserCert("username", "filename");
+    }
+    
+    @Test
+    public void testFlagRevokedUserCert() throws IOException {
+        String userName = "user1";
+        String fileName = "user1.csr.pem";
+        Path certFile = dummyStoragePath.resolve("users").resolve(userName).resolve("certs/user1.crt.pem");
+        Path revokedUserPath = dummyStoragePath.resolve("users").resolve(userName).resolve("revoked");
+        Path expectedCertTarget = revokedUserPath.resolve("user1.crt.pem");
+        CopyOption[] expectedOptions = new CopyOption[] { StandardCopyOption.REPLACE_EXISTING };
+        
+        given(filesService.exists(certFile)).willReturn(true);
+        given(filesService.move(certFile, expectedCertTarget, expectedOptions)).willReturn(expectedCertTarget);
+        
+        sut.setFilesService(filesService);
+        sut.flagRevokedUserCert(userName, fileName);
+        
+        verify(filesService, times(1)).exists(certFile);
+        verify(filesService, times(1)).createDirectories(revokedUserPath);
+        verify(filesService, times(1)).move(certFile, expectedCertTarget, expectedOptions);
+        verify(filesService, times(1)).setLastModifiedTime(eq(expectedCertTarget), any(FileTime.class));
+    }
+    
     @Test(expected = IOException.class)
     public void testFlagRevokedUserCertAndCSRForIOError() throws IOException {
         String userName = "user1";
         String fileName = "user1.csr.pem";
-        Path certFile = dummyStoragePath.resolve("users").resolve(userName).resolve("certs/user1.crt.pem");
         doThrow(new IOException("TEST")).when(filesService).move(any(Path.class), any(Path.class), any());
-        given(filesService.exists(certFile)).willReturn(true);
 
         sut.setFilesService(filesService);
         sut.flagRevokedUserCertAndCSR(userName, fileName);
@@ -292,6 +382,7 @@ public class DefaultAdminDataServiceTest {
         CopyOption[] expectedOptions = new CopyOption[] { StandardCopyOption.REPLACE_EXISTING };
 
         given(filesService.exists(certFile)).willReturn(true);
+        given(filesService.move(certFile, expectedCertTarget, expectedOptions)).willReturn(expectedCertTarget);
 
         sut.setFilesService(filesService);
         sut.flagRevokedUserCertAndCSR(userName, fileName);
@@ -301,8 +392,33 @@ public class DefaultAdminDataServiceTest {
         verify(filesService, times(1)).move(expectedCSRSource, expectedCSRTarget, expectedOptions);
         verify(filesService, times(1)).createDirectories(revokedUserPath);
         verify(filesService, times(1)).move(certFile, expectedCertTarget, expectedOptions);
+        verify(filesService, times(1)).setLastModifiedTime(eq(expectedCertTarget), any(FileTime.class));
     }
 
+    @Test
+    public void testFlagCSRasRenewed_existingFlag() throws IOException {
+        String userName = "user1";
+        Path csrFile = dummyStoragePath.resolve("users").resolve(userName).resolve("accepted/user1-ac.csr.pem");
+        Path expectedRenewFile = dummyStoragePath.resolve("users").resolve(userName).resolve("accepted/user1-ac.csr.pem.renewed");
+    
+        sut.setFilesService(filesService);
+        sut.flagCSRasRenewed(csrFile);
+        
+        verify(filesService, times(1)).setLastModifiedTime(eq(expectedRenewFile), any(FileTime.class));
+    }
+    
+    @Test
+    public void testFlagCSRasRenewed_noFlag() throws IOException {
+        String userName = "user2";
+        Path csrFile = dummyStoragePath.resolve("users").resolve(userName).resolve("accepted/user2-ac.csr.pem");
+        Path expectedRenewFile = dummyStoragePath.resolve("users").resolve(userName).resolve("accepted/user2-ac.csr.pem.renewed");
+        
+        sut.setFilesService(filesService);
+        sut.flagCSRasRenewed(csrFile);
+        
+        verify(filesService, times(1)).createFile(expectedRenewFile);
+    }
+    
     @AfterClass
     public static void tearDown() throws IOException {
         FileSystemUtils.deleteRecursively(dummyStoragePath);

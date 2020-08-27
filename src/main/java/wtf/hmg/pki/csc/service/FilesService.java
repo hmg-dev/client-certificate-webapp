@@ -26,6 +26,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.FileTime;
 import java.util.function.BiPredicate;
 import java.util.stream.Stream;
 
@@ -44,4 +45,8 @@ public interface FilesService {
     Path copy(Path source, Path target, CopyOption... options) throws IOException;
 
     Path createDirectories(Path dir, FileAttribute<?>... attrs) throws IOException;
+	
+	Path createFile(Path path, FileAttribute<?>... attrs) throws IOException;
+	
+	Path setLastModifiedTime(Path path, FileTime time) throws IOException;
 }

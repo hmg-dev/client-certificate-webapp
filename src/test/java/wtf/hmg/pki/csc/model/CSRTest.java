@@ -36,12 +36,14 @@ public class CSRTest {
         String userName = "Pinky";
         Path csrFile = mock(Path.class);
         Temporal lastModified = Instant.now();
+        Temporal lastRenewed = Instant.now();
         String csrInfo = "CN=CSR Info";
 
         CSR.Builder b = new CSR.Builder();
         b.userName(userName)
             .csrFile(csrFile)
             .lastModified(lastModified)
+            .lastRenewed(lastRenewed)
             .csrInfo(csrInfo);
 
         CSR result = b.build();
@@ -49,6 +51,7 @@ public class CSRTest {
         assertEquals(userName, result.getUserName());
         assertEquals(csrFile, result.getCsrFile());
         assertEquals(lastModified, result.getLastModified());
+        assertEquals(lastRenewed, result.getLastRenewed());
         assertEquals(csrInfo, result.getCsrInfo());
     }
 }

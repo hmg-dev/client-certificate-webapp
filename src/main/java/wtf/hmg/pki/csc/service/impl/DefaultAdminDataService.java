@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import wtf.hmg.pki.csc.config.AppConfig;
 import wtf.hmg.pki.csc.model.CSR;
+import wtf.hmg.pki.csc.model.CertInfo;
 import wtf.hmg.pki.csc.service.FilesService;
 import wtf.hmg.pki.csc.util.CscUtils;
 
@@ -33,6 +34,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.FileTime;
+import java.time.temporal.Temporal;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -71,6 +74,19 @@ public class DefaultAdminDataService implements wtf.hmg.pki.csc.service.AdminDat
         }
         return Collections.emptyList();
     }
+    
+    @Override
+    public List<CertInfo> findRevokedCertificates() {
+        try {
+            return filesService.find(appConfig.getStoragePath().resolve("users"), 3, CscUtils::isRevokedCertFile)
+                    .map(this::pathToCertInfo)
+                    .collect(Collectors.toList());
+        } catch (IOException|IllegalStateException e) {
+            log.warn("Unable to find pending csr", e);
+        }
+        
+        return Collections.emptyList();
+    }
 
     private CSR pathToCSR(final Path path) {
         return pathToCSRAndUser(path, path.getParent());
@@ -85,15 +101,47 @@ public class DefaultAdminDataService implements wtf.hmg.pki.csc.service.AdminDat
         b.csrFile(path);
         b.csrInfo(CscUtils.extractCSRInfo(path));
         b.userName(userFolder.getFileName().toString());
-        try {
-            b.lastModified(Files.getLastModifiedTime(path).toInstant());
-        } catch (IOException e) {
-            throw new IllegalStateException("Unable to determine lastModifiedDate of: " + path, e);
-        }
+        b.lastModified(determineLastModified(path));
+        b.lastRenewed(determineLastRenewed(path));
 
         return b.build();
     }
-
+    
+    private CertInfo pathToCertInfo(final Path path) {
+        return pathToCertInfoAndUser(path, path.getParent().getParent());
+    }
+    
+    private CertInfo pathToCertInfoAndUser(final Path path, final Path userFolder) {
+        CertInfo.Builder b = new CertInfo.Builder();
+        b.certFile(path);
+        b.userName(userFolder.getFileName().toString());
+        b.lastModified(determineLastModified(path));
+        
+        return b.build();
+    }
+    
+    private Temporal determineLastRenewed(final Path path) {
+        Path renewPath = path.getParent().resolve(path.getFileName().toString() + ".renewed");
+        if(Files.isRegularFile(renewPath)) {
+            return determineLastModified(renewPath);
+        }
+        
+        return null;
+    }
+    
+    private Temporal determineLastModified(final Path path) {
+        try {
+            return Files.getLastModifiedTime(path).toInstant();
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to determine lastModifiedDate of: " + path, e);
+        }
+    }
+    
+    @Override
+    public Path findAcceptedCSR(final String userName, final String fileName) {
+        return appConfig.getStoragePath().resolve("users").resolve(userName).resolve("accepted").resolve(fileName);
+    }
+    
     @Override
     public Path findUserCertForRequest(final String userName, final String fileName) {
         String baseName = StringUtils.substringBefore(fileName, ".csr");
@@ -101,18 +149,26 @@ public class DefaultAdminDataService implements wtf.hmg.pki.csc.service.AdminDat
 
         return filesService.exists(certFile) ? certFile : null;
     }
-
+    
     @Override
-    public void flagRevokedUserCertAndCSR(final String userName, final String fileName) throws IOException {
+    public void flagRevokedUserCert(final String userName, final String fileName) throws IOException {
         Path certFile = findUserCertForRequest(userName, fileName);
         Path certRevokedPath = appConfig.getStoragePath().resolve("users").resolve(userName).resolve("revoked").resolve(certFile.getFileName());
+    
+        filesService.createDirectories(certRevokedPath.getParent());
+        Path target = filesService.move(certFile, certRevokedPath, StandardCopyOption.REPLACE_EXISTING);
+        filesService.setLastModifiedTime(target, FileTime.fromMillis(System.currentTimeMillis()));
+    }
+    
+    @Override
+    public void flagRevokedUserCertAndCSR(final String userName, final String fileName) throws IOException {
         Path source = appConfig.getStoragePath().resolve("users").resolve(userName).resolve("accepted").resolve(fileName);
         Path target = appConfig.getStoragePath().resolve("users").resolve(userName).resolve("rejected").resolve(fileName);
 
         filesService.createDirectories(target.getParent());
         filesService.move(source, target, StandardCopyOption.REPLACE_EXISTING);
-        filesService.createDirectories(certRevokedPath.getParent());
-        filesService.move(certFile, certRevokedPath, StandardCopyOption.REPLACE_EXISTING);
+        
+        flagRevokedUserCert(userName, fileName);
     }
 
     @Override
@@ -132,7 +188,18 @@ public class DefaultAdminDataService implements wtf.hmg.pki.csc.service.AdminDat
         filesService.createDirectories(target.getParent());
         filesService.move(source, target, StandardCopyOption.REPLACE_EXISTING);
     }
-
+    
+    @Override
+    public void flagCSRasRenewed(final Path csrFile) throws IOException {
+        Path renewPath = csrFile.getParent().resolve(csrFile.getFileName().toString() + ".renewed");
+        if(Files.isRegularFile(renewPath)) {
+            filesService.setLastModifiedTime(renewPath, FileTime.fromMillis(System.currentTimeMillis()));
+        } else {
+            filesService.createFile(renewPath);
+        }
+        
+    }
+    
     public void setAppConfig(final AppConfig appConfig) {
         this.appConfig = appConfig;
     }
@@ -140,5 +207,5 @@ public class DefaultAdminDataService implements wtf.hmg.pki.csc.service.AdminDat
     public void setFilesService(final FilesService filesService) {
         this.filesService = filesService;
     }
-
+    
 }

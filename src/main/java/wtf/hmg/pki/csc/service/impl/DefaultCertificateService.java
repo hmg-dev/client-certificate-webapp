@@ -120,7 +120,7 @@ public class DefaultCertificateService implements CertificateService {
         Path sourcePath = appConfig.getStoragePath().resolve("users").resolve(userName).resolve(csrFileName);
         Path targetPath = certRepo().resolve("intermediate/csr").resolve(csrFileName);
 
-        filesService.copy(sourcePath, targetPath);
+        filesService.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
 
         return targetPath;
     }

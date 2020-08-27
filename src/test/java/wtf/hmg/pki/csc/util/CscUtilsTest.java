@@ -19,8 +19,10 @@
 */
 package wtf.hmg.pki.csc.util;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.IOException;
@@ -37,47 +39,60 @@ import static org.mockito.Mockito.mock;
 @RunWith(MockitoJUnitRunner.class)
 public class CscUtilsTest {
 
+    @Mock
+    private BasicFileAttributes attributes;
+    @Mock
+    private BasicFileAttributes invalidAttributes;
+    
+    @Before
+    public void init() {
+        given(attributes.isRegularFile()).willReturn(true);
+        given(invalidAttributes.isRegularFile()).willReturn(false);
+    }
+    
+    
     @Test
     public void testIsValidCSRFileName() {
         assertTrue(CscUtils.isValidCSRFileName("/tmp/request.csr"));
         assertTrue(CscUtils.isValidCSRFileName("request.csr"));
         assertTrue(CscUtils.isValidCSRFileName("/tmp/request.csr.pem"));
         assertTrue(CscUtils.isValidCSRFileName("/tmp/request.pem"));
+        
         assertFalse(CscUtils.isValidCSRFileName("/tmp/request.invalid"));
         assertFalse(CscUtils.isValidCSRFileName("user.request"));
     }
 
     @Test
     public void testIsValidCSRFile() {
-        BasicFileAttributes attributes = mock(BasicFileAttributes.class);
-        BasicFileAttributes invalidAttributes = mock(BasicFileAttributes.class);
-
-        given(attributes.isRegularFile()).willReturn(true);
-        given(invalidAttributes.isRegularFile()).willReturn(false);
-
         assertTrue(CscUtils.isValidCSRFile(Paths.get("/tmp/request.csr"), attributes));
         assertTrue(CscUtils.isValidCSRFile(Paths.get("/tmp/request.csr.pem"), attributes));
         assertTrue(CscUtils.isValidCSRFile(Paths.get("/tmp/request.pem"), attributes));
+        
         assertFalse(CscUtils.isValidCSRFile(Paths.get("/tmp/request.csr"), invalidAttributes));
         assertFalse(CscUtils.isValidCSRFile(Paths.get("/tmp/request.invalid"), attributes));
     }
 
     @Test
     public void testIsSignedCSRFile() {
-        BasicFileAttributes attributes = mock(BasicFileAttributes.class);
-        BasicFileAttributes invalidAttributes = mock(BasicFileAttributes.class);
-
-        given(attributes.isRegularFile()).willReturn(true);
-        given(invalidAttributes.isRegularFile()).willReturn(false);
-
-        assertFalse(CscUtils.isSignedCSRFile(Paths.get("/tmp/request.csr"), attributes));
         assertTrue(CscUtils.isSignedCSRFile(Paths.get("/tmp/accepted/request.csr"), attributes));
-        assertFalse(CscUtils.isSignedCSRFile(Paths.get("/tmp/request.pem"), attributes));
         assertTrue(CscUtils.isSignedCSRFile(Paths.get("/tmp/accepted/request.pem"), attributes));
+        
+        assertFalse(CscUtils.isSignedCSRFile(Paths.get("/tmp/request.csr"), attributes));
+        assertFalse(CscUtils.isSignedCSRFile(Paths.get("/tmp/request.pem"), attributes));
         assertFalse(CscUtils.isSignedCSRFile(Paths.get("/tmp/request.csr"), invalidAttributes));
         assertFalse(CscUtils.isSignedCSRFile(Paths.get("/tmp/request.invalid"), attributes));
     }
 
+    @Test
+    public void testIsRevokedCertFile() {
+        assertTrue(CscUtils.isRevokedCertFile(Paths.get("/tmp/revoked/cert.crt.pem"), attributes));
+        assertTrue(CscUtils.isRevokedCertFile(Paths.get("/tmp/revoked/cert.crt"), attributes));
+        
+        assertFalse(CscUtils.isRevokedCertFile(Paths.get("/tmp/request.csr"), attributes));
+        assertFalse(CscUtils.isRevokedCertFile(Paths.get("/tmp/revoked/cert.crt.pem"), invalidAttributes));
+        assertFalse(CscUtils.isRevokedCertFile(Paths.get("/tmp/revoked/request.csr"), attributes));
+    }
+    
     @Test
     public void testValidateCSR() throws URISyntaxException {
         Path dummyCSR = Paths.get(ClassLoader.getSystemResource("dummy.csr.pem").toURI());

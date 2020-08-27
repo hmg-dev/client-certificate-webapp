@@ -21,6 +21,7 @@
         </div>
 
         <div id="pending-requests-area" class="admin-list-area">
+            <img src="cert-request.png" alt="" th:width="50px" style="float: left; vertical-align: middle;  margin-right: 10px;" />
             <h2 th:text="#{admin.ui.requests.headline}"></h2>
             <table id="pending-requests" class="admin-list-table">
                 <thead>
@@ -63,12 +64,14 @@
             </table>
         </div>
         <div id="signed-certificates-area" class="admin-list-area">
+            <img src="certs.png" alt="" th:width="50px" style="float: left; vertical-align: middle;  margin-right: 10px;" />
             <h2 th:text="#{admin.ui.signed.headline}"></h2>
             <table id="signed-certificates" class="admin-list-table">
                 <thead>
                     <tr>
                         <th th:text="#{admin.ui.requests.user}"></th>
-                        <th th:text="#{admin.ui.requests.date}"></th>
+                        <th th:text="#{admin.ui.requests.created}"></th>
+                        <th th:text="#{admin.ui.requests.renewed}"></th>
                         <th th:text="#{admin.ui.requests.filename}"></th>
                         <th th:text="#{admin.ui.requests.actions}"></th>
                     </tr>
@@ -80,6 +83,8 @@
                     <tr th:each="crt,iterStat : ${signedRequests}">
                         <td th:class="${iterStat.odd}?'': 'alt'" th:text="${crt.getUserName()}"></td>
                         <td th:class="${iterStat.odd}?'': 'alt'" th:text="${#temporals.format(crt.getLastModified(), 'dd-MM-yyyy HH:mm')}"></td>
+                        <td th:class="${iterStat.odd}?'': 'alt'" th:if="${crt.getLastRenewed() == null}">-</td>
+                        <td th:class="${iterStat.odd}?'': 'alt'" th:if="${crt.getLastRenewed() != null}" th:text="${#temporals.format(crt.getLastRenewed(), 'dd-MM-yyyy HH:mm')}"></td>
                         <td th:class="${iterStat.odd}?'': 'alt'">
                             <div class="tooltip-parent">
                                 [[${crt.getCsrFile().getFileName().toString()}]]
@@ -87,15 +92,70 @@
                             </div>
                         </td>
                         <td th:class="${iterStat.odd}?'actions': 'alt actions'">
-                            <form action="#" th:action="@{/revokeCert}" method="post">
-                                PW: <input type="password" name="cryptPassword" class="crypt-pwd-field" />
-                                Key: <input type="password" name="keyPassword" class="crypt-pwd-field" />
+                            <form action="#" th:action="@{/revokeCert}" method="post" style="float: left; margin-right: 10px;">
+                                <div class="action-popup">
+                                    <a href="#" onclick="this.parentElement.style.visibility = 'hidden'" style="color:white">
+                                        <div class="close-button">x</div>
+                                    </a>
+                                    <div class="pw-label">Ansible Password:</div>
+                                    <input type="password" name="cryptPassword" class="crypt-pwd-field" />
+                                    <br/>
+                                    <div class="pw-label">Intermediate Key Password:</div>
+                                    <input type="password" name="keyPassword" class="crypt-pwd-field" />
+
+                                    <input class="revoke-button action-button-popup" type="submit" name="revoke" th:value="#{admin.ui.signed.action.revoke}" />
+                                </div>
                                 <input type="hidden" name="userName" th:value="${crt.getUserName()}" />
                                 <input type="hidden" name="fileName" th:value="${crt.getCsrFile().getFileName().toString()}" />
-                                <input type="submit" name="revoke" th:value="#{admin.ui.signed.action.revoke}" />
+                                <button onclick="event.preventDefault(); this.parentElement.getElementsByTagName('div')[0].style.visibility = 'visible'"
+                                        class="revoke-button" name="revoke" th:text="#{admin.ui.signed.action.revoke}"></button>
+                            </form>
+                            <form action="#" th:action="@{/renewCert}" method="post">
+                                <div class="action-popup">
+                                    <a href="#" onclick="this.parentElement.style.visibility = 'hidden'" style="color:white">
+                                        <div class="close-button">x</div>
+                                    </a>
+                                    <div class="pw-label">Ansible Password:</div>
+                                    <input type="password" name="cryptPassword" class="crypt-pwd-field" />
+                                    <br/>
+                                    <div class="pw-label">Intermediate Key Password:</div>
+                                    <input type="password" name="keyPassword" class="crypt-pwd-field" />
+
+                                    <input class="renew-button action-button-popup" type="submit" name="renew" th:value="#{admin.ui.signed.action.renew}" />
+                                </div>
+                                <input type="hidden" name="userName" th:value="${crt.getUserName()}" />
+                                <input type="hidden" name="fileName" th:value="${crt.getCsrFile().getFileName().toString()}" />
+                                <button onclick="event.preventDefault(); this.parentElement.getElementsByTagName('div')[0].style.visibility = 'visible'"
+                                        class="renew-button" type="submit" name="renew" th:text="#{admin.ui.signed.action.renew}" ></button>
                             </form>
                         </td>
                     </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="revoked-certificates-area" class="admin-list-area">
+            <img src="certs-revoked.png" alt="" th:width="50px" style="float: left; vertical-align: middle; margin-right: 10px;" />
+            <h2 th:text="#{admin.ui.revoked.headline}"></h2>
+            <table id="revoked-certificates" class="admin-list-table">
+                <thead>
+                <tr>
+                    <th th:text="#{admin.ui.requests.user}"></th>
+                    <th th:text="#{admin.ui.requests.date}"></th>
+                    <th th:text="#{admin.ui.requests.filename}"></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(revokedCerts)}">
+                    <td th:colspan="4" th:text="#{admin.ui.revoked.nocerts}" class="no-requests"></td>
+                </tr>
+                <tr th:each="cert,iterStat : ${revokedCerts}">
+                    <td th:class="${iterStat.odd}?'': 'alt'" th:text="${cert.getUserName()}"></td>
+                    <td th:class="${iterStat.odd}?'': 'alt'" th:text="${#temporals.format(cert.getLastModified(), 'dd-MM-yyyy HH:mm')}"></td>
+                    <td th:class="${iterStat.odd}?'': 'alt'">
+                        [[${cert.getCertFile().getFileName().toString()}]]
+                    </td>
+                </tr>
                 </tbody>
             </table>
         </div>

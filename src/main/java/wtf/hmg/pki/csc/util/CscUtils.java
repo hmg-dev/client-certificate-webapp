@@ -56,6 +56,19 @@ public class CscUtils {
         return StringUtils.endsWithAny(fileName, "pem", "csr");
     }
 
+    public static boolean isRevokedCertFile(final Path path, final BasicFileAttributes attr) {
+        return attr.isRegularFile() && isValidCertFileName(path.getFileName().toString()) && isRevoked(path);
+    }
+    
+    public static boolean isValidCertFileName(final String fileName) {
+        return StringUtils.endsWithAny(fileName, "crt.pem", "crt");
+    }
+    
+    private static boolean isRevoked(final Path path) {
+        return path.getParent() != null && path.getParent().getFileName() != null &&
+                "revoked".equalsIgnoreCase(path.getParent().getFileName().toString());
+    }
+    
     public static boolean validateCSR(final Path csrFile) {
         try {
             return validateCSRInternal(Files.newBufferedReader(csrFile));

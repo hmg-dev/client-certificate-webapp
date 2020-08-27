@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>wtf.hmg</groupId>
 	<artifactId>pki-web</artifactId>
-	<version>0.1.0-SNAPSHOT</version>
+	<version>0.2.0-SNAPSHOT</version>
 	<name>pki-web</name>
 	<description>Web-Application to manage PKI - mainly client-side-certificates</description>
 	
