@@ -93,6 +93,7 @@ public class UIController {
             redirectAttributes.addFlashAttribute("message",
                     messageSource.getMessage("user.request.renew.success", null, locale));
         } catch (IOException e) {
+            log.info("Failed User-Interaction 'requestRenew': ", e);
             redirectAttributes.addFlashAttribute("errorMessage",
                     messageSource.getMessage("user.request.renew.error", new Object[]{e.getMessage()}, locale));
         }
@@ -176,6 +177,7 @@ public class UIController {
             redirectAttributes.addFlashAttribute("message",
                     messageSource.getMessage("user.request.file.success", null, locale));
         } catch (IOException e) {
+            log.info("Failed User-Interaction 'csrFile': ", e);
             redirectAttributes.addFlashAttribute("errorMessage",
                     messageSource.getMessage("user.request.file.error", new Object[]{e.getMessage()}, locale));
         }
@@ -201,6 +203,7 @@ public class UIController {
             redirectAttributes.addFlashAttribute("message",
                     messageSource.getMessage("user.request.text.success", null, locale));
         } catch (IOException e) {
+            log.info("Failed User-Interaction 'csrText': ", e);
             redirectAttributes.addFlashAttribute("errorMessage",
                     messageSource.getMessage("user.request.text.error", new Object[]{e.getMessage()}, locale));
         }

@@ -83,7 +83,7 @@ public class DefaultUserDataService implements UserDataService {
             return certs.map(path -> pathToUserCertInfo(path, userName)).collect(Collectors.toList());
         } catch (IOException e) {
             log.info("Unable to find CertFiles for user: {}", e.getMessage());
-            log.debug("Unable to find CertFiles for user: " + userName, e);
+            log.debug("Unable to find CertFiles for user: {}", userName, e);  // http://slf4j.org/faq.html#paramException
         }
         return Collections.emptyList();
     }
@@ -107,7 +107,7 @@ public class DefaultUserDataService implements UserDataService {
             return files.map(path -> path.getFileName().toString()).collect(Collectors.toList());
         } catch (IOException e) {
             log.info("Unable to find CSRFiles for user: {}", e.getMessage());
-            log.debug("Unable to find CSRFiles for user: " + userName, e);
+            log.debug("Unable to find CSRFiles for user: {}", userName, e);
         }
 
         return Collections.emptyList();

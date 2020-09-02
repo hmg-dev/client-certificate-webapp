@@ -147,7 +147,7 @@ public class AdminUIController {
             adminDataService.flagCSRasRenewed(csr);
     
             certificateService.encryptWorkingFiles(cryptPassword);
-            certificateService.commitAndPushChanges(operatingUser, "Renew User-Certificate"); // TODO: how to show the user, that the cert has been renewed?
+            certificateService.commitAndPushChanges(operatingUser, "Renew User-Certificate");
     
             redirectAttributes.addFlashAttribute("message", "Certificate has been successfully renewed!");
         } catch (GitAPIException | IOException | IllegalStateException e) {
