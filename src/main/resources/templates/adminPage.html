@@ -49,14 +49,25 @@
                             <form action="#" th:action="@{/rejectCSR}" method="post" class="reject-form">
                                 <input type="hidden" name="userName" th:value="${csr.getUserName()}" />
                                 <input type="hidden" name="fileName" th:value="${csr.getCsrFile().getFileName().toString()}" />
-                                <input type="submit" name="reject" th:value="#{admin.ui.requests.action.reject}" />
+                                <input class="revoke-button" type="submit" name="reject" th:value="#{admin.ui.requests.action.reject}" />
                             </form>
                             <form action="#" th:action="@{/signCSR}" method="post">
-                                PW: <input type="password" name="cryptPassword" class="crypt-pwd-field" />
-                                Key: <input type="password" name="keyPassword" class="crypt-pwd-field" />
+                                <div class="action-popup">
+                                    <a href="#" onclick="this.parentElement.style.visibility = 'hidden'" style="color:white">
+                                        <div class="close-button">x</div>
+                                    </a>
+                                    <div class="pw-label">Ansible Password:</div>
+                                    <input type="password" name="cryptPassword" class="crypt-pwd-field" />
+                                    <br/>
+                                    <div class="pw-label">Intermediate Key Password:</div>
+                                    <input type="password" name="keyPassword" class="crypt-pwd-field" />
+
+                                    <input class="renew-button action-button-popup" type="submit" name="sign" th:value="#{admin.ui.requests.action.sign}" />
+                                </div>
                                 <input type="hidden" name="userName" th:value="${csr.getUserName()}" />
                                 <input type="hidden" name="fileName" th:value="${csr.getCsrFile().getFileName().toString()}" />
-                                <input type="submit" name="sign" th:value="#{admin.ui.requests.action.sign}" />
+                                <button onclick="event.preventDefault(); this.parentElement.getElementsByTagName('div')[0].style.visibility = 'visible'"
+                                        class="renew-button" type="submit" name="sign" th:text="#{admin.ui.requests.action.sign}"></button>
                             </form>
                         </td>
                     </tr>
