@@ -21,8 +21,10 @@ package wtf.hmg.pki.csc.service;
 
 import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.MultipartFile;
+import wtf.hmg.pki.csc.model.CertInfo;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 
 public interface UserDataService {
@@ -33,7 +35,7 @@ public interface UserDataService {
 
     List<String> findRejectedCertificateRequestsForUser(String userName);
 
-    List<String> findCertificatesForUser(String userName);
+    List<CertInfo> findCertificatesForUser(String userName);
 
     Resource userCertificateFileAsResource(String userName, String filename) throws IOException;
 
@@ -44,4 +46,8 @@ public interface UserDataService {
     void saveUploadedCSR(String userName, MultipartFile csrFile) throws IOException;
 
     void saveUploadedCSR(String userName, String fileName, String fileData) throws IOException;
+	
+	boolean isCertRenewed(Path cert) throws IOException;
+	
+	void requestRenewalForCert(String userName, String certFileName) throws IOException;
 }

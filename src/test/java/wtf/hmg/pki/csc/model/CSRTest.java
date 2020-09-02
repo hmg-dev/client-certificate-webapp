@@ -38,13 +38,15 @@ public class CSRTest {
         Temporal lastModified = Instant.now();
         Temporal lastRenewed = Instant.now();
         String csrInfo = "CN=CSR Info";
+        boolean renewalReq = true;
 
         CSR.Builder b = new CSR.Builder();
         b.userName(userName)
             .csrFile(csrFile)
             .lastModified(lastModified)
             .lastRenewed(lastRenewed)
-            .csrInfo(csrInfo);
+            .csrInfo(csrInfo)
+            .renewalRequested(renewalReq);
 
         CSR result = b.build();
         assertNotNull(result);
@@ -53,5 +55,6 @@ public class CSRTest {
         assertEquals(lastModified, result.getLastModified());
         assertEquals(lastRenewed, result.getLastRenewed());
         assertEquals(csrInfo, result.getCsrInfo());
+        assertEquals(renewalReq, result.isRenewalRequested());
     }
 }

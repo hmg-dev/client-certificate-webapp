@@ -29,6 +29,7 @@ public class CSR {
     private final Temporal lastModified;
     private final Temporal lastRenewed;
     private final String csrInfo;
+    private final boolean renewalRequested;
 
     private CSR(final Builder b) {
         userName = b.userName;
@@ -36,6 +37,7 @@ public class CSR {
         lastModified = b.lastModified;
         lastRenewed = b.lastRenewed;
         csrInfo = b.csrInfo;
+        renewalRequested = b.renewalRequested;
     }
 
     public String getUserName() {
@@ -58,12 +60,17 @@ public class CSR {
         return lastRenewed;
     }
     
+    public boolean isRenewalRequested() {
+        return renewalRequested;
+    }
+    
     public static class Builder {
         private String userName;
         private Path csrFile;
         private Temporal lastModified;
         private Temporal lastRenewed;
         private String csrInfo;
+        private boolean renewalRequested;
 
         public CSR build() {
             return new CSR(this);
@@ -91,6 +98,11 @@ public class CSR {
     
         public Builder lastRenewed(final Temporal lastRenewed) {
             this.lastRenewed = lastRenewed;
+            return this;
+        }
+        
+        public Builder renewalRequested(final boolean renewalRequested) {
+            this.renewalRequested = renewalRequested;
             return this;
         }
     }

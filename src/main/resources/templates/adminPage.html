@@ -90,6 +90,7 @@
                                 [[${crt.getCsrFile().getFileName().toString()}]]
                                 <div class="tooltip-content" th:utext="${#strings.replace(crt.getCsrInfo(),',','<br/>')}"></div>
                             </div>
+                            <img th:if="${crt.isRenewalRequested()}" th:title="#{admin.ui.signed.renewal.requested}" src="renew-request.png" th:width="20px" style="vertical-align: middle; margin-right: 3px;"/>
                         </td>
                         <td th:class="${iterStat.odd}?'actions': 'alt actions'">
                             <form action="#" th:action="@{/revokeCert}" method="post" style="float: left; margin-right: 10px;">

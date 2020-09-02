@@ -46,6 +46,8 @@ public class TestPathHelper {
         Files.write(user1ac.resolve("user1-ac.csr.pem.renewed"), "1".getBytes());
         Files.write(user1rc.resolve("user1-rc.csr.pem"), "DUMMY-CSR Rejected".getBytes());
         Files.write(user1certs.resolve("user1.crt.pem"), "DUMMY-CERT".getBytes());
+        Files.write(user1certs.resolve("user1.crt.pem.reqrenew"), "renewal-request".getBytes());
+        Files.write(user1certs.resolve("user1-ac.crt.pem.reqrenew"), "renewal-request".getBytes());
         Files.write(user1revoked.resolve("user1.crt.pem"), "DUMMY-CERT".getBytes());
         Files.write(caCert, "DUMMY CA-CERT".getBytes());
 

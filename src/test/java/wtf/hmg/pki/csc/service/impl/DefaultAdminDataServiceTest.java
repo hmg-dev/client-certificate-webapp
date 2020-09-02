@@ -136,6 +136,7 @@ public class DefaultAdminDataServiceTest {
             assertNotNull(result.get(i).getLastModified());
             assertNotNull(result.get(i).getLastRenewed());
             assertTrue(Files.exists(result.get(i).getCsrFile()));
+            assertTrue(result.get(i).isRenewalRequested());
         }
     }
     
@@ -400,11 +401,13 @@ public class DefaultAdminDataServiceTest {
         String userName = "user1";
         Path csrFile = dummyStoragePath.resolve("users").resolve(userName).resolve("accepted/user1-ac.csr.pem");
         Path expectedRenewFile = dummyStoragePath.resolve("users").resolve(userName).resolve("accepted/user1-ac.csr.pem.renewed");
+        Path expectedRequestFile = dummyStoragePath.resolve("users").resolve(userName).resolve("certs/user1-ac.crt.pem.reqrenew");
     
         sut.setFilesService(filesService);
         sut.flagCSRasRenewed(csrFile);
         
         verify(filesService, times(1)).setLastModifiedTime(eq(expectedRenewFile), any(FileTime.class));
+        verify(filesService, times(1)).deleteRecursively(expectedRequestFile);
     }
     
     @Test
@@ -417,6 +420,7 @@ public class DefaultAdminDataServiceTest {
         sut.flagCSRasRenewed(csrFile);
         
         verify(filesService, times(1)).createFile(expectedRenewFile);
+        verify(filesService, never()).deleteRecursively(any(Path.class));
     }
     
     @AfterClass

@@ -351,4 +351,51 @@ public class UIControllerTest {
         Path dummyCSR = Paths.get(ClassLoader.getSystemResource("dummy.csr.pem").toURI());
         return new String(Files.readAllBytes(dummyCSR));
     }
+    
+    @Test
+    public void testRequestRenew_invalidFileName() throws IOException {
+        String errorMessage = "Dummy Error Message invalid file!";
+        given(messageSource.getMessage(eq("user.request.renew.cert.invalid"), any(), eq(dummyLocale))).willReturn(errorMessage);
+        
+    	String result = sut.requestRenew("INVALID", dummyLocale, redirectAttributes, auth);
+        assertNotNull(result);
+        assertEquals("redirect:/", result);
+    
+        verify(auth, never()).getPrincipal();
+        verify(user, never()).getAttribute("unique_name");
+        verify(redirectAttributes, atLeastOnce()).addFlashAttribute("errorMessage", errorMessage);
+        verify(userDataService, never()).requestRenewalForCert(anyString(), anyString());
+    }
+    
+    @Test
+    public void testRequestRenew_exceptionOccurred() throws IOException {
+        String errorMessage = "Dummy Error Message Exception occurred!";
+        given(messageSource.getMessage(eq("user.request.renew.error"), any(), eq(dummyLocale))).willReturn(errorMessage);
+        doThrow(new IOException("TEST ERROR")).when(userDataService).requestRenewalForCert(anyString(), anyString());
+        
+        String result = sut.requestRenew("user1.crt.pem", dummyLocale, redirectAttributes, auth);
+        assertNotNull(result);
+        assertEquals("redirect:/", result);
+        
+        verify(auth, atLeastOnce()).getPrincipal();
+        verify(user, atLeastOnce()).getAttribute("unique_name");
+        verify(redirectAttributes, atLeastOnce()).addFlashAttribute("errorMessage", errorMessage);
+        verify(userDataService, times(1)).requestRenewalForCert(anyString(), anyString());
+    }
+    
+    @Test
+    public void testRequestRenew() throws IOException {
+        String successMessage = "Dummy Success - renew requested!";
+        given(messageSource.getMessage(eq("user.request.renew.success"), any(), eq(dummyLocale))).willReturn(successMessage);
+        
+        String result = sut.requestRenew("user1.crt.pem", dummyLocale, redirectAttributes, auth);
+        assertNotNull(result);
+        assertEquals("redirect:/", result);
+        
+        verify(auth, atLeastOnce()).getPrincipal();
+        verify(user, atLeastOnce()).getAttribute("unique_name");
+        verify(redirectAttributes, atLeastOnce()).addFlashAttribute("message", successMessage);
+        verify(redirectAttributes, never()).addFlashAttribute(eq("errorMessage"), anyString());
+        verify(userDataService, times(1)).requestRenewalForCert(anyString(), anyString());
+    }
 }

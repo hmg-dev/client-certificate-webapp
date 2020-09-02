@@ -160,7 +160,7 @@ hr {
     flex-direction: column;
     flex-wrap: wrap;
     justify-content: center;
-    background-color: #f8f7f2;
+    background-color: #dfdeda;
     padding-left: 10px;
 }
 
@@ -332,4 +332,27 @@ h2 {
     padding-left: 4px;
     padding-right: 4px;
     font-weight: bold;
+}
+
+.request-renew-button {
+    background-color: #e3ffe2;
+    color: #666666;
+    font-weight: bold;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    cursor: pointer;
+    border-radius: 6px;
+    box-shadow: 2px 2px 5px grey;
+    margin-left: 20px;
+    border-color: #94b594;
+}
+
+.request-renew-button:hover {
+    background-color: #eaffd2;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    cursor: pointer;
+    border-radius: 6px;
+    box-shadow: 0px 0px 1px #777;
+    color: black;
 }

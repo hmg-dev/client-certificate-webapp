@@ -97,12 +97,16 @@ public class DefaultAdminDataService implements wtf.hmg.pki.csc.service.AdminDat
     }
 
     private CSR pathToCSRAndUser(final Path path, final Path userFolder) {
+        String baseName = StringUtils.substringBefore(path.getFileName().toString(), ".csr");
+        Path certFile = userFolder.resolve("certs").resolve(baseName + ".crt.pem.reqrenew");
+        
         CSR.Builder b = new CSR.Builder();
         b.csrFile(path);
         b.csrInfo(CscUtils.extractCSRInfo(path));
         b.userName(userFolder.getFileName().toString());
         b.lastModified(determineLastModified(path));
         b.lastRenewed(determineLastRenewed(path));
+        b.renewalRequested(Files.isRegularFile(certFile));
 
         return b.build();
     }
@@ -197,7 +201,12 @@ public class DefaultAdminDataService implements wtf.hmg.pki.csc.service.AdminDat
         } else {
             filesService.createFile(renewPath);
         }
-        
+    
+        String baseName = StringUtils.substringBefore(csrFile.getFileName().toString(), ".csr");
+        Path certFile = csrFile.getParent().getParent().resolve("certs").resolve(baseName + ".crt.pem.reqrenew");
+        if(Files.isRegularFile(certFile)) {
+            filesService.deleteRecursively(certFile);
+        }
     }
     
     public void setAppConfig(final AppConfig appConfig) {

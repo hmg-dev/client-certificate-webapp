@@ -48,5 +48,9 @@ public interface FilesService {
 	
 	Path createFile(Path path, FileAttribute<?>... attrs) throws IOException;
 	
+	boolean isRegularFile(Path path, LinkOption... options);
+	
 	Path setLastModifiedTime(Path path, FileTime time) throws IOException;
+	
+	FileTime getLastModifiedTime(Path path, LinkOption... options) throws IOException;
 }

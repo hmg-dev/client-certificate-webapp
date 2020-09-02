@@ -28,12 +28,15 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import wtf.hmg.pki.csc.config.AppConfig;
+import wtf.hmg.pki.csc.model.CertInfo;
+import wtf.hmg.pki.csc.service.FilesService;
 import wtf.hmg.pki.csc.service.UserDataService;
 import wtf.hmg.pki.csc.util.CscUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -52,6 +55,8 @@ public class DefaultUserDataService implements UserDataService {
 
     @Autowired
     private AppConfig appConfig;
+    @Autowired
+    private FilesService filesService;
 
     @Override
     public List<String> findCertificateRequestsForUser(final String userName) {
@@ -72,11 +77,31 @@ public class DefaultUserDataService implements UserDataService {
     }
 
     @Override
-    public List<String> findCertificatesForUser(final String userName) {
+    public List<CertInfo> findCertificatesForUser(final String userName) {
         Path userPath = appConfig.getStoragePath().resolve(USERS_SUBDIR).resolve(userName).resolve(CERTS_SUBDIR);
-        return findUserFilesInternal(userPath, userName);
+        try(Stream<Path> certs = Files.find(userPath, 1, CscUtils::isValidCSRFile)) {
+            return certs.map(path -> pathToUserCertInfo(path, userName)).collect(Collectors.toList());
+        } catch (IOException e) {
+            log.info("Unable to find CertFiles for user: {}", e.getMessage());
+            log.debug("Unable to find CertFiles for user: " + userName, e);
+        }
+        return Collections.emptyList();
     }
-
+    
+    private CertInfo pathToUserCertInfo(final Path certFile, final String userName) {
+        Path renewRequest = certFile.getParent().resolve(certFile.getFileName().toString() + ".reqrenew");
+        CertInfo.Builder b = new CertInfo.Builder();
+        b.userName(userName)
+                .certFile(certFile)
+                .renewalRequested(Files.isRegularFile(renewRequest));
+        try {
+            b.renewed(isCertRenewed(certFile));
+        } catch (IOException e) {
+            log.warn("Unable to determine renewed state", e);
+        }
+        return b.build();
+    }
+    
     private List<String> findUserFilesInternal(final Path userPath, final String userName) {
         try(Stream<Path> files = Files.find(userPath, 1, CscUtils::isValidCSRFile)) {
             return files.map(path -> path.getFileName().toString()).collect(Collectors.toList());
@@ -147,9 +172,45 @@ public class DefaultUserDataService implements UserDataService {
         }
         return userPath;
     }
-
+    
+    @Override
+    public boolean isCertRenewed(final Path cert) throws IOException {
+        String basename = StringUtils.substringBefore(cert.getFileName().toString(), ".crt");
+        Path userdir = cert.getParent().getParent();
+        Path renewed = userdir.resolve("accepted").resolve(basename + ".csr.pem.renewed");
+        Path renewReq = cert.getParent().resolve(cert.getFileName().toString() + ".reqrenew");
+        
+        if(!filesService.isRegularFile(renewed)) {
+            return false;
+        }
+        if(!filesService.isRegularFile(renewReq)) {
+            return true;
+        }
+    
+        FileTime renewTime = filesService.getLastModifiedTime(renewed);
+        FileTime requestTime = filesService.getLastModifiedTime(renewReq);
+        
+        return renewTime.compareTo(requestTime) > 0;
+    }
+    
+    @Override
+    public void requestRenewalForCert(final String userName, final String certFileName) throws IOException {
+        Path userDir = findAndEnsureUserDirectory(userName);
+        Path reqFile = userDir.resolve("certs").resolve(certFileName + ".reqrenew");
+        
+        if(filesService.isRegularFile(reqFile)) {
+            filesService.setLastModifiedTime(reqFile, FileTime.fromMillis(System.currentTimeMillis()));
+        } else {
+            filesService.createFile(reqFile);
+        }
+    }
+    
     public void setAppConfig(final AppConfig appConfig) {
         this.appConfig = appConfig;
     }
-
+    
+    public void setFilesService(final FilesService filesService) {
+        this.filesService = filesService;
+    }
+    
 }

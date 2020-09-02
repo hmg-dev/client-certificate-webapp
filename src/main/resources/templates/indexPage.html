@@ -31,9 +31,18 @@
                         <h2 th:text="#{user.data.mycerts.headline}"></h2>
                     </div>
                     <p class="hint" th:if="${#lists.isEmpty(userCertificates)}" th:text="#{user.data.mycerts.nocerts}"></p>
-                    <p th:each="cert : ${userCertificates}">
-                        <a th:href="@{'/certs/' + ${cert}}" th:text="${cert}"></a>
-                    </p>
+                    <div th:each="cert : ${userCertificates}" style="margin: 5px">
+                        <form action="#" th:action="@{/requestRenew}" method="post">
+                            <a th:href="@{'/certs/' + ${cert.getCertFileName()}}" th:text="${cert.getCertFileName()}" style="vertical-align: middle"></a>
+                            <img th:if="${cert.isRenewed() and !cert.isRenewalRequested()}" th:title="#{user.data.mycerts.renewed}" src="cert-renewed.png" th:width="20px" style="vertical-align: middle; margin-right: 3px;" />
+                            <button th:if="${!cert.isRenewalRequested()}" class="request-renew-button" onclick="return confirm('Current certificate will be revoked when renewed!\nRequest renewal anyway?')"> <!-- FIXME: implement proper dialog! -->
+                                <img src="renew-request.png" th:width="15px" style="vertical-align: middle; margin-right: 3px;" />
+                                [[#{user.data.mycerts.action.requestrenew}]]
+                            </button>
+                            <input type="hidden" name="fileName" th:value="${cert.getCertFileName()}" />
+                            <img th:if="${cert.isRenewalRequested()}" th:title="#{user.data.mycerts.renew.requested}" src="renew-request.png" th:width="15px" style="vertical-align: middle; margin-right: 3px;" />
+                        </form>
+                    </div>
                 </div>
                 <div class="userdata.myreq">
                     <div>
@@ -59,7 +68,10 @@
 
                 <p class="hint" th:utext="#{global.info.description}"></p>
                 <code th:utext="#{global.info.description.code}"></code>
+                <hr/>
 
+                <h3 th:text="#{global.info.renewal.headline}"></h3>
+                <p th:utext="#{global.info.renewal.description}"></p>
             </div>
         </div>
 

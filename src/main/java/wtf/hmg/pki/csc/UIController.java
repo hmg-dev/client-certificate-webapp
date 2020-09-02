@@ -36,6 +36,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import wtf.hmg.pki.csc.model.CertInfo;
 import wtf.hmg.pki.csc.service.UserDataService;
 import wtf.hmg.pki.csc.util.CscUtils;
 
@@ -62,7 +63,7 @@ public class UIController {
         List<String> userCSRList = userDataService.findCertificateRequestsForUser(uid);
         List<String> userAcceptedCSRList = userDataService.findAcceptedCertificateRequestsForUser(uid);
         List<String> userRejectedCSRList = userDataService.findRejectedCertificateRequestsForUser(uid);
-        List<String> userCertificates = userDataService.findCertificatesForUser(uid);
+        List<CertInfo> userCertificates = userDataService.findCertificatesForUser(uid);
 
         boolean isAdmin = user.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority).anyMatch(a -> StringUtils.equals(ADMIN_GROUP, a));
@@ -76,7 +77,29 @@ public class UIController {
 
         return "indexPage";
     }
-
+    
+    @PostMapping("/requestRenew")
+    public String requestRenew(@RequestParam final String fileName, final Locale locale,
+                               final RedirectAttributes redirectAttributes, final OAuth2AuthenticationToken auth) {
+        if(fileName == null || !CscUtils.isValidCSRFileName(fileName)) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    messageSource.getMessage("user.request.renew.cert.invalid", new Object[]{fileName}, locale));
+            return "redirect:/";
+        }
+    
+        String uid = determineUID(auth);
+        try {
+            userDataService.requestRenewalForCert(uid, fileName);
+            redirectAttributes.addFlashAttribute("message",
+                    messageSource.getMessage("user.request.renew.success", null, locale));
+        } catch (IOException e) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    messageSource.getMessage("user.request.renew.error", new Object[]{e.getMessage()}, locale));
+        }
+        
+        return "redirect:/";
+    }
+    
     @GetMapping("/certs/{fileName:.+}")
     @ResponseBody
     public ResponseEntity<Resource> downloadCert(@PathVariable final String fileName, final OAuth2AuthenticationToken auth) {

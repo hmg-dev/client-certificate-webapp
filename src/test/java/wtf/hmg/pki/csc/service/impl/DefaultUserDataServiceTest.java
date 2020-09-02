@@ -24,17 +24,21 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
 import wtf.hmg.pki.csc.config.AppConfig;
+import wtf.hmg.pki.csc.model.CertInfo;
+import wtf.hmg.pki.csc.service.FilesService;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -49,6 +53,9 @@ public class DefaultUserDataServiceTest {
     private static Path dummyStoragePath;
     private Path dummyCRLPath;
     private AppConfig appConfig;
+    
+    @Mock
+    private FilesService filesService;
 
     @BeforeClass
     public static void init() throws IOException {
@@ -66,6 +73,7 @@ public class DefaultUserDataServiceTest {
 
         sut = new DefaultUserDataService();
         sut.setAppConfig(appConfig);
+        sut.setFilesService(filesService);
     }
 
     @Test
@@ -142,26 +150,30 @@ public class DefaultUserDataServiceTest {
 
     @Test
     public void testFindCertificatesForUserWithoutAnyFiles() {
-        List<String> requests = sut.findCertificatesForUser("user0");
+        List<CertInfo> requests = sut.findCertificatesForUser("user0");
         assertNotNull(requests);
         assertTrue(requests.isEmpty());
     }
 
     @Test
     public void testFindCertificatesForInvalidUser() {
-        List<String> requests = sut.findCertificatesForUser("userINVALID");
+        List<CertInfo> requests = sut.findCertificatesForUser("userINVALID");
         assertNotNull(requests);
         assertTrue(requests.isEmpty());
     }
 
     @Test
     public void testFindCertificatesForUserWithExistingFiles() {
-        List<String> requests = sut.findCertificatesForUser("user1");
+        List<CertInfo> requests = sut.findCertificatesForUser("user1");
         assertNotNull(requests);
         assertFalse(requests.isEmpty());
         assertEquals(1, requests.size());
         assertNotNull(requests.get(0));
-        assertEquals("user1.crt.pem", requests.get(0));
+        assertNotNull(requests.get(0).getCertFile());
+        assertEquals("user1.crt.pem", requests.get(0).getCertFile().getFileName().toString());
+        assertEquals("user1", requests.get(0).getUserName());
+        assertTrue(requests.get(0).isRenewalRequested());
+        assertFalse(requests.get(0).isRenewed());
     }
 
     @Test
@@ -309,6 +321,139 @@ public class DefaultUserDataServiceTest {
         assertEquals(dummyCSRData, csrFile.get(0));
     }
 
+    @Test
+    public void testIsCertRenewed_notRenewed() throws IOException {
+        Path userDir = mock(Path.class);
+        Path certDir = mock(Path.class);
+    	Path acceptedDir = mock(Path.class);
+    	Path renewFlag = mock(Path.class);
+    
+    	String filename = "cert.crt.pem";
+        Path cert = mock(Path.class);
+        Path certFilename = mock(Path.class);
+    	
+    	given(cert.getParent()).willReturn(certDir);
+    	given(certDir.getParent()).willReturn(userDir);
+    	given(userDir.resolve("accepted")).willReturn(acceptedDir);
+    	given(acceptedDir.resolve(anyString())).willReturn(renewFlag);
+    	given(cert.getFileName()).willReturn(certFilename);
+    	given(certFilename.toString()).willReturn(filename);
+    	
+    	boolean result = sut.isCertRenewed(cert);
+    	assertFalse(result);
+    	
+    	verify(cert, atLeastOnce()).getParent();
+    	verify(certDir, atLeastOnce()).getParent();
+    	verify(userDir, atLeastOnce()).resolve("accepted");
+    	verify(cert, atLeastOnce()).getFileName();
+    	verify(acceptedDir, atLeastOnce()).resolve("cert.csr.pem.renewed");
+    	verify(filesService, atLeastOnce()).isRegularFile(renewFlag);
+        verify(filesService, never()).getLastModifiedTime(any(Path.class));
+    }
+    
+    @Test
+    public void testIsCertRenewed_renewed() throws IOException {
+        Path userDir = mock(Path.class);
+        Path certDir = mock(Path.class);
+        Path acceptedDir = mock(Path.class);
+        Path renewFlag = mock(Path.class);
+        
+        String filename = "cert.crt.pem";
+        Path cert = mock(Path.class);
+        Path certFilename = mock(Path.class);
+        
+        given(cert.getParent()).willReturn(certDir);
+        given(certDir.getParent()).willReturn(userDir);
+        given(userDir.resolve("accepted")).willReturn(acceptedDir);
+        given(acceptedDir.resolve(anyString())).willReturn(renewFlag);
+        given(cert.getFileName()).willReturn(certFilename);
+        given(certFilename.toString()).willReturn(filename);
+        given(filesService.isRegularFile(renewFlag)).willReturn(true);
+        
+        boolean result = sut.isCertRenewed(cert);
+        assertTrue(result);
+        
+        verify(cert, atLeastOnce()).getParent();
+        verify(certDir, atLeastOnce()).getParent();
+        verify(userDir, atLeastOnce()).resolve("accepted");
+        verify(cert, atLeastOnce()).getFileName();
+        verify(acceptedDir, atLeastOnce()).resolve("cert.csr.pem.renewed");
+        verify(filesService, atLeastOnce()).isRegularFile(renewFlag);
+        verify(filesService, never()).getLastModifiedTime(any(Path.class));
+    }
+    
+    @Test
+    public void testIsCertRenewed_renewRequestAfterRenewFlag() throws IOException {
+        Path userDir = mock(Path.class);
+        Path certDir = mock(Path.class);
+        Path acceptedDir = mock(Path.class);
+        Path renewFlag = mock(Path.class);
+        FileTime renewFlagTime = mock(FileTime.class);
+        FileTime renewReqTime = mock(FileTime.class);
+        
+        String filename = "cert.crt.pem";
+        Path cert = mock(Path.class);
+        Path certFilename = mock(Path.class);
+        Path certRenewReq = mock(Path.class);
+        
+        given(cert.getParent()).willReturn(certDir);
+        given(certDir.getParent()).willReturn(userDir);
+        given(userDir.resolve("accepted")).willReturn(acceptedDir);
+        given(acceptedDir.resolve(anyString())).willReturn(renewFlag);
+        given(cert.getFileName()).willReturn(certFilename);
+        given(certFilename.toString()).willReturn(filename);
+        given(certDir.resolve(anyString())).willReturn(certRenewReq);
+        given(filesService.isRegularFile(renewFlag)).willReturn(true);
+        given(filesService.isRegularFile(certRenewReq)).willReturn(true);
+        given(filesService.getLastModifiedTime(renewFlag)).willReturn(renewFlagTime);
+        given(filesService.getLastModifiedTime(certRenewReq)).willReturn(renewReqTime);
+        given(renewFlagTime.compareTo(renewReqTime)).willReturn(-1);
+        
+        boolean result = sut.isCertRenewed(cert);
+        assertFalse(result);
+    
+        given(renewFlagTime.compareTo(renewReqTime)).willReturn(1);
+        result = sut.isCertRenewed(cert);
+        assertTrue(result);
+        
+        verify(cert, atLeastOnce()).getParent();
+        verify(certDir, atLeastOnce()).getParent();
+        verify(userDir, atLeastOnce()).resolve("accepted");
+        verify(cert, atLeastOnce()).getFileName();
+        verify(acceptedDir, atLeastOnce()).resolve("cert.csr.pem.renewed");
+        verify(certDir, atLeastOnce()).resolve(filename + ".reqrenew");
+        verify(filesService, atLeastOnce()).isRegularFile(renewFlag);
+        verify(filesService, atLeastOnce()).isRegularFile(certRenewReq);
+        verify(filesService, atLeastOnce()).getLastModifiedTime(renewFlag);
+        verify(filesService, atLeastOnce()).getLastModifiedTime(certRenewReq);
+    }
+    
+    @Test
+    public void testRequestRenewalForCert_existingRequest() throws IOException {
+        String dummyFilename = "user1.crt.pem";
+        Path expectedPath = dummyStoragePath.resolve("users/user1/certs").resolve(dummyFilename + ".reqrenew");
+        given(filesService.isRegularFile(expectedPath)).willReturn(true);
+        
+    	sut.requestRenewalForCert("user1", dummyFilename);
+    	
+    	verify(filesService, times(1)).isRegularFile(expectedPath);
+    	verify(filesService, times(1)).setLastModifiedTime(eq(expectedPath), any(FileTime.class));
+        verify(filesService, never()).createFile(expectedPath);
+    }
+    
+    @Test
+    public void testRequestRenewalForCert_newRequest() throws IOException {
+        String dummyFilename = "user1.crt.pem";
+        Path expectedPath = dummyStoragePath.resolve("users/user1/certs").resolve(dummyFilename + ".reqrenew");
+        given(filesService.isRegularFile(expectedPath)).willReturn(false);
+        
+        sut.requestRenewalForCert("user1", dummyFilename);
+        
+        verify(filesService, times(1)).isRegularFile(expectedPath);
+        verify(filesService, never()).setLastModifiedTime(eq(expectedPath), any(FileTime.class));
+        verify(filesService, times(1)).createFile(expectedPath);
+    }
+    
     @AfterClass
     public static void tearDown() throws IOException {
         FileSystemUtils.deleteRecursively(dummyStoragePath);

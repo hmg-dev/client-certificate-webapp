@@ -75,7 +75,17 @@ public class WrapperFilesService implements FilesService {
     }
     
     @Override
+    public boolean isRegularFile(Path path, LinkOption... options) {
+        return Files.isRegularFile(path, options);
+    }
+    
+    @Override
     public Path setLastModifiedTime(Path path, FileTime time) throws IOException {
         return Files.setLastModifiedTime(path, time);
+    }
+    
+    @Override
+    public FileTime getLastModifiedTime(Path path, LinkOption... options) throws IOException {
+        return Files.getLastModifiedTime(path, options);
     }
 }
