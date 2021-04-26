@@ -27,13 +27,11 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.ui.Model;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import wtf.hmg.pki.csc.model.CSR;
 import wtf.hmg.pki.csc.model.CertInfo;
 import wtf.hmg.pki.csc.service.AdminDataService;
-import wtf.hmg.pki.csc.service.CertificateService;
 import wtf.hmg.pki.csc.service.CryptService;
 
 import java.io.IOException;
@@ -49,22 +47,18 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
-public class AdminUIControllerTest {
+public class AdminUIControllerTest extends AbstractCertificateControllerTest {
 
     private AdminUIController sut;
 
     @Mock
     private AdminDataService adminDataService;
     @Mock
-    private CertificateService certificateService;
-    @Mock
     private CryptService cryptService;
     @Mock
     private RedirectAttributes redirectAttributes;
     @Mock
     private OAuth2AuthenticationToken auth;
-    @Mock
-    private OAuth2User user;
     @Mock
     private Model model;
     @Mock
@@ -73,13 +67,7 @@ public class AdminUIControllerTest {
     private String userName = "user@Name";
     private String expectedUsername = "user_Name";
     private String fileName = "fileName";
-    private String cryptPassword = "NARF";
     private String keyPassword = "ZORT";
-    private String adminName = "Pinky";
-    @Mock
-    private Path csrRepoFile;
-    @Mock
-    private Path certFile;
     
     @Before
     public void setUp() {
@@ -351,10 +339,4 @@ public class AdminUIControllerTest {
         verify(redirectAttributes, times(1)).addFlashAttribute(eq("message"), anyString());
     }
     
-    private void verifyPrepareWorkspace() throws IOException, GitAPIException {
-        verify(certificateService, times(1)).cleanupWorkingFiles();
-        verify(certificateService, times(1)).cloneCertificateRepository();
-        verify(certificateService, times(1)).decryptWorkingFiles(cryptPassword);
-    }
-
 }

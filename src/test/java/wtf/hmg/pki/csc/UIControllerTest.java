@@ -27,27 +27,24 @@ import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.context.MessageSource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import wtf.hmg.pki.csc.service.UserDataService;
+import wtf.hmg.pki.csc.util.SupportUtils;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Locale;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.willReturn;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -71,6 +68,8 @@ public class UIControllerTest {
     private MessageSource messageSource;
     @Mock
     private Locale dummyLocale;
+    @Mock
+    private SupportUtils supportUtils;
 
     private String dummyUID = "T.User@company.domain";
     private String expectedUID = "t.user_company.domain";
@@ -80,6 +79,7 @@ public class UIControllerTest {
         sut = new UIController();
         sut.setUserDataService(userDataService);
         sut.setMessageSource(messageSource);
+        sut.setSupportUtils(supportUtils);
 
         given(auth.getPrincipal()).willReturn(user);
         given(user.getAttribute("unique_name")).willReturn(dummyUID);
@@ -87,13 +87,8 @@ public class UIControllerTest {
 
     @Test
     public void testIndexPage() {
-        GrantedAuthority authority1 = mock(GrantedAuthority.class);
-        GrantedAuthority authority2 = mock(GrantedAuthority.class);
-        Collection<GrantedAuthority> authorities = Arrays.asList(authority1, authority2);
-
-        willReturn(authorities).given(user).getAuthorities();
-        given(authority1.getAuthority()).willReturn("ROLE_company.domain");
-        given(authority2.getAuthority()).willReturn("ROLE_DevOps");
+        given(supportUtils.isAdmin(user)).willReturn(true);
+        given(supportUtils.isSharedAppAdmin(user)).willReturn(true);
 
         String result = sut.indexPage(model, auth);
 
@@ -103,7 +98,8 @@ public class UIControllerTest {
         verify(auth, atLeastOnce()).getPrincipal();
         verify(model, times(1)).addAttribute("user", user);
         verify(user, atLeastOnce()).getAttribute("unique_name");
-        verify(user, atLeastOnce()).getAuthorities();
+        verify(supportUtils, atLeastOnce()).isAdmin(user);
+        verify(supportUtils, atLeastOnce()).isSharedAppAdmin(user);
 
         verify(userDataService, times(1)).findCertificateRequestsForUser(expectedUID);
         verify(userDataService, times(1)).findAcceptedCertificateRequestsForUser(expectedUID);
@@ -114,6 +110,7 @@ public class UIControllerTest {
         verify(model, times(1)).addAttribute(eq("userRejectedCSRList"), anyList());
         verify(model, times(1)).addAttribute(eq("userCertificates"), anyList());
         verify(model, times(1)).addAttribute("isAdmin", true);
+        verify(model, times(1)).addAttribute("isSharedAppAdmin", true);
     }
 
     @Test

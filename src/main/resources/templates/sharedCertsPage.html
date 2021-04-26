@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	<title>HMG PKI - Client Side Certificates - Shared Certs</title>
+
+	<link rel="stylesheet" href="style.css">
+	<link rel="icon" href="/favicon.ico" type="image/x-icon">
+</head>
+<body id=body>
+<div class="admin-link">
+	<a href="/" th:text="#{admin.ui.back}"></a>
+	<span th:if="${isAdmin}"> | <a href="/admin" th:text="#{global.admin.interface}"></a></span>
+</div>
+
+<h1>HMG "Client Side Certificates" Shared Certs WebApp</h1>
+
+<div th:if="${message}" class="message">
+	<span th:utext="${message}"></span>
+</div>
+<div th:if="${errorMessage}" class="error-message">
+	<span th:utext="${errorMessage}"></span>
+</div>
+
+<div id="create-shared-app-area" class="admin-list-area">
+	<img src="cert-request.png" alt="" th:width="50px" style="float: left; vertical-align: middle;  margin-right: 10px;" />
+	<h2 th:text="#{shared.certs.create.headline}"></h2>
+
+	<form action="#" th:action="@{/createSharedApp}" method="post" class="shared-app-form">
+		<span th:text="#{shared.certs.create.label}"></span>
+		<input type="text" name="appName" class="app-name-field">
+		<input type="submit" id="create-shared-app" name="create-shared-app" th:value="#{shared.certs.create.button}" />
+	</form>
+</div>
+
+<div id="shared-apps-area" class="admin-list-area">
+	<img src="shared-certs.png" alt="" th:width="50px" style="float: left; vertical-align: middle;  margin-right: 10px;" />
+	<h2 th:text="#{shared.certs.list.headline}"></h2>
+	<table id="shared-certs" class="admin-list-table">
+		<thead>
+		<tr>
+			<th th:text="#{shared.certs.list.appname}"></th>
+			<th th:text="#{shared.certs.list.keyfilename}"></th>
+			<th th:text="#{shared.certs.list.csrfilename}"></th>
+			<th th:text="#{shared.certs.list.crtfilename}"></th>
+			<th th:text="#{shared.certs.list.actions}"></th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr th:if="${#lists.isEmpty(sharedApps)}">
+			<td th:colspan="6" th:text="#{shared.certs.list.nocerts}" class="no-requests"></td>
+		</tr>
+		<tr th:each="sa,iterStat : ${sharedApps}">
+			<td th:class="${iterStat.odd}?'': 'alt'" th:text="${sa.getName()}"></td>
+			<td th:class="${iterStat.odd}?'': 'alt'">
+				<a th:if="${sa.getKeyFile() != null}" th:href="@{'/apps/' + ${sa.getName()} + '/' + ${sa.getKeyFile().getFileName()}}">
+					<span th:text="${sa.getKeyFile().getFileName()}"></span>
+				</a><br/>
+				<span th:if="${sa.getKeyFile() != null}" th:text="${#temporals.format(sa.getKeyLastModified(), 'dd-MM-yyyy HH:mm')}" class="shared-app-last-modified"></span>
+			</td>
+			<td th:class="${iterStat.odd}?'': 'alt'">
+				<div th:if="${sa.getCsrFile() != null}" class="tooltip-parent">
+					<a th:href="@{'/apps/' + ${sa.getName()} + '/' + ${sa.getCsrFile().getFileName()}}">
+						<span th:text="${sa.getCsrFile().getFileName()}"></span>
+					</a>
+					<div class="tooltip-content" th:utext="${#strings.replace(sa.getCsrInfo(),',','<br/>')}"></div>
+				</div><br/>
+				<span th:if="${sa.getCsrFile() != null}" th:text="${#temporals.format(sa.getCsrLastModified(), 'dd-MM-yyyy HH:mm')}" class="shared-app-last-modified"></span>
+			</td>
+			<td th:class="${iterStat.odd}?'': 'alt'">
+				<a th:if="${sa.getCertFile() != null}" th:href="@{'/apps/' + ${sa.getName()} + '/' + ${sa.getCertFile().getFileName()}}">
+					<span th:text="${sa.getCertFile().getFileName()}"></span>
+				</a>
+				<img th:if="${sa.isRenewalRequested()}" th:title="#{user.data.mycerts.renew.requested}" src="renew-request.png" th:width="15px" style="vertical-align: middle; margin-right: 3px;" /><br/>
+				<span th:if="${sa.getCertFile() != null}" th:text="${#temporals.format(sa.getCertLastModified(), 'dd-MM-yyyy HH:mm')}" class="shared-app-last-modified"></span>
+			</td>
+			<td th:class="${iterStat.odd}?'actions': 'alt actions'">
+				<form action="#" th:action="@{/requestAppRenew}" method="post" th:if="${!isAdmin && sa.getCertFile() != null && !sa.isRenewalRequested()}">
+					<button class="request-renew-button" onclick="return confirm('Current certificate will be revoked when renewed!\nRequest renewal anyway?')"> <!-- FIXME: implement proper dialog! -->
+						<img src="renew-request.png" th:width="15px" style="vertical-align: middle; margin-right: 3px;" />
+						[[#{user.data.mycerts.action.requestrenew}]]
+					</button>
+					<input type="hidden" name="fileName" th:value="${sa.getCertFile().getFileName()}" />
+					<input type="hidden" name="appName" th:value="${sa.getName()}" />
+				</form>
+				<form th:if="${isAdmin && sa.getCertFile() == null}" action="#" th:action="@{/signAppCSR}" method="post" style="float: left; margin-right: 10px;">
+					<div class="action-popup">
+						<a href="#" onclick="this.parentElement.style.visibility = 'hidden'" style="color:white">
+							<div class="close-button">x</div>
+						</a>
+						<div class="pw-label">Ansible Password:</div>
+						<input type="password" name="cryptPassword" class="crypt-pwd-field" />
+						<br/>
+						<div class="pw-label">Intermediate Key Password:</div>
+						<input type="password" name="serverKeyPassword" class="crypt-pwd-field" />
+
+						<input class="renew-button action-button-popup" type="submit" name="sign" th:value="#{admin.ui.requests.action.sign}" />
+					</div>
+					<input type="hidden" name="appName" th:value="${sa.getName()}" />
+					<input type="hidden" name="csrFileName" th:value="${sa.getCsrFile().getFileName().toString()}" />
+					<button onclick="event.preventDefault(); this.parentElement.getElementsByTagName('div')[0].style.visibility = 'visible'"
+							class="renew-button" type="submit" name="sign" th:text="#{admin.ui.requests.action.sign}"></button>
+				</form>
+				<form th:if="${isAdmin && sa.getCertFile() != null}" action="#" th:action="@{/revokeAppCert}" method="post" style="float: left; margin-right: 10px;">
+					<div class="action-popup">
+						<a href="#" onclick="this.parentElement.style.visibility = 'hidden'" style="color:white">
+							<div class="close-button">x</div>
+						</a>
+						<div class="pw-label">Ansible Password:</div>
+						<input type="password" name="cryptPassword" class="crypt-pwd-field" />
+						<br/>
+						<div class="pw-label">Intermediate Key Password:</div>
+						<input type="password" name="serverKeyPassword" class="crypt-pwd-field" />
+
+						<input class="revoke-button action-button-popup" type="submit" name="revoke" th:value="#{admin.ui.signed.action.revoke}" />
+					</div>
+					<input type="hidden" name="appName" th:value="${sa.getName()}" />
+					<input type="hidden" name="crtFileName" th:value="${sa.getCertFile().getFileName().toString()}" />
+					<button onclick="event.preventDefault(); this.parentElement.getElementsByTagName('div')[0].style.visibility = 'visible'"
+							class="revoke-button" name="revoke" th:text="#{admin.ui.signed.action.revoke}"></button>
+				</form>
+				<form th:if="${isAdmin && sa.getCertFile() != null}" action="#" th:action="@{/renewAppCert}" method="post" style="float: left; margin-right: 10px;">
+					<div class="action-popup">
+						<a href="#" onclick="this.parentElement.style.visibility = 'hidden'" style="color:white">
+							<div class="close-button">x</div>
+						</a>
+						<div class="pw-label">Ansible Password:</div>
+						<input type="password" name="cryptPassword" class="crypt-pwd-field" />
+						<br/>
+						<div class="pw-label">Intermediate Key Password:</div>
+						<input type="password" name="serverKeyPassword" class="crypt-pwd-field" />
+
+						<input class="renew-button action-button-popup" type="submit" name="renew" th:value="#{admin.ui.signed.action.renew}" />
+					</div>
+					<input type="hidden" name="appName" th:value="${sa.getName()}" />
+					<input type="hidden" name="crtFileName" th:value="${sa.getCertFile().getFileName().toString()}" />
+					<button onclick="event.preventDefault(); this.parentElement.getElementsByTagName('div')[0].style.visibility = 'visible'"
+							class="renew-button" type="submit" name="renew" th:text="#{admin.ui.signed.action.renew}" ></button>
+				</form>
+			</td>
+		</tr>
+		</tbody>
+	</table>
+</div>
+
+</body>
+</html>

@@ -58,6 +58,11 @@ public class WrapperFilesService implements FilesService {
     public boolean deleteRecursively(Path root) throws IOException {
         return FileSystemUtils.deleteRecursively(root);
     }
+    
+    @Override
+    public boolean deleteIfExists(Path path) throws IOException {
+        return Files.deleteIfExists(path);
+    }
 
     @Override
     public Path copy(Path source, Path target, CopyOption... options) throws IOException {
@@ -87,5 +92,10 @@ public class WrapperFilesService implements FilesService {
     @Override
     public FileTime getLastModifiedTime(Path path, LinkOption... options) throws IOException {
         return Files.getLastModifiedTime(path, options);
+    }
+    
+    @Override
+    public Stream<Path> list(Path dir) throws IOException {
+        return Files.list(dir);
     }
 }

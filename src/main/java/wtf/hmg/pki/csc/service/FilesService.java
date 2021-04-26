@@ -31,8 +31,10 @@ import java.util.function.BiPredicate;
 import java.util.stream.Stream;
 
 public interface FilesService {
-
-    boolean exists(Path path, LinkOption... options);
+	
+	Stream<Path> list(Path dir) throws IOException;
+	
+	boolean exists(Path path, LinkOption... options);
 
     Path move(Path source, Path target, CopyOption... options) throws IOException;
 
@@ -41,8 +43,10 @@ public interface FilesService {
                       FileVisitOption... options) throws IOException;
 
     boolean deleteRecursively(Path root) throws IOException;
-
-    Path copy(Path source, Path target, CopyOption... options) throws IOException;
+	
+	boolean deleteIfExists(Path path) throws IOException;
+	
+	Path copy(Path source, Path target, CopyOption... options) throws IOException;
 
     Path createDirectories(Path dir, FileAttribute<?>... attrs) throws IOException;
 	

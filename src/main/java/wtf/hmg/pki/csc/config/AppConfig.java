@@ -32,6 +32,7 @@ public class AppConfig {
     private Path gitUserKeyfile;
     private String cryptSalt;
     private Path certRevocationListPath;
+    private Path scriptsPath;
 
     public Path getStoragePath() {
         return storagePath;
@@ -71,5 +72,13 @@ public class AppConfig {
 
     public void setCertRevocationListPath(final Path certRevocationListPath) {
         this.certRevocationListPath = certRevocationListPath;
+    }
+    
+    public Path getScriptsPath() {
+        return scriptsPath;
+    }
+    
+    public void setScriptsPath(final Path scriptsPath) {
+        this.scriptsPath = scriptsPath;
     }
 }

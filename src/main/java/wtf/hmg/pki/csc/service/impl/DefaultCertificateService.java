@@ -32,6 +32,7 @@ import wtf.hmg.pki.csc.config.AppConfig;
 import wtf.hmg.pki.csc.service.CertificateService;
 import wtf.hmg.pki.csc.service.CryptService;
 import wtf.hmg.pki.csc.service.FilesService;
+import wtf.hmg.pki.csc.service.SharedAppService;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -124,6 +125,16 @@ public class DefaultCertificateService implements CertificateService {
 
         return targetPath;
     }
+    
+    @Override
+    public Path copyAppCSRToRepository(final String appName, final String csrFileName) throws IOException {
+        Path sourcePath = appConfig.getStoragePath().resolve(SharedAppService.SHARED_APPS_FOLDER).resolve(appName).resolve(csrFileName);
+        Path targetPath = certRepo().resolve("intermediate/csr").resolve(csrFileName);
+    
+        filesService.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+    
+        return targetPath;
+    }
 
     @Override
     public void copyCertificateToUserDirectory(final String userName, final Path certFile) throws IOException {
@@ -132,7 +143,12 @@ public class DefaultCertificateService implements CertificateService {
         filesService.createDirectories(targetPath.getParent());
         filesService.copy(certFile, targetPath, StandardCopyOption.REPLACE_EXISTING); // FIXME: to replace or not to replace!?
     }
-
+    
+    @Override
+    public void copyCertificateToAppDirectory(final String appName, final Path certFile) throws IOException {
+        Path targetPath = appConfig.getStoragePath().resolve(SharedAppService.SHARED_APPS_FOLDER).resolve(appName).resolve(certFile.getFileName().toString());
+        filesService.copy(certFile, targetPath, StandardCopyOption.REPLACE_EXISTING);
+    }
 
     private Path certRepo() {
         return appConfig.getStoragePath().resolve("cert-repo");
@@ -153,5 +169,5 @@ public class DefaultCertificateService implements CertificateService {
     public void setCryptService(final CryptService cryptService) {
         this.cryptService = cryptService;
     }
-
+    
 }

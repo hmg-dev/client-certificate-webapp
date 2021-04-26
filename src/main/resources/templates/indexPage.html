@@ -20,8 +20,11 @@
         <div th:if="${errorMessage}" class="error-message">
             <span th:text="${errorMessage}"></span>
         </div>
-
-        <div class="admin-link" th:if="${isAdmin}"><a href="/admin" th:text="#{global.admin.interface}"></a></div>
+        
+        <div class="admin-link">
+            <a href="/shared-certs" th:if="${isSharedAppAdmin}" th:text="#{global.shared.certs}"></a>
+            <span th:if="${isAdmin}"> | <a href="/admin" th:text="#{global.admin.interface}"></a></span>
+        </div>
 
         <div id="status-area">
             <div id="user-data">

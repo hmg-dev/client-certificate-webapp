@@ -34,6 +34,7 @@ import wtf.hmg.pki.csc.model.CSR;
 import wtf.hmg.pki.csc.model.CertInfo;
 import wtf.hmg.pki.csc.service.FilesService;
 import wtf.hmg.pki.csc.util.CscUtilsTest;
+import wtf.hmg.pki.csc.util.SupportUtils;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -82,6 +83,7 @@ public class DefaultAdminDataServiceTest {
 
         sut = new DefaultAdminDataService();
         sut.setAppConfig(appConfig);
+        sut.setSupportUtils(new SupportUtils());
     
         given(attributes.isRegularFile()).willReturn(true);
         given(invalidAttributes.isRegularFile()).willReturn(false);

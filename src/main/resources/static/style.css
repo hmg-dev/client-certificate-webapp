@@ -137,6 +137,15 @@ hr {
     width: 120px;
 }
 
+.shared-app-form .app-name-field {
+    width: 150px;
+}
+
+.shared-app-last-modified {
+    color: gray;
+    font-size: 0.8em;
+}
+
 #pending-requests .reject-form {
     float: left;
     padding-right: 5px;

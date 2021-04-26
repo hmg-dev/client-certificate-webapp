@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.springframework.util.FileSystemUtils;
 import wtf.hmg.pki.csc.config.AppConfig;
 import wtf.hmg.pki.csc.service.FilesService;
+import wtf.hmg.pki.csc.util.SupportUtils;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -62,6 +63,7 @@ public class DefaultCryptServiceIntegrationTest {
         sut = new DefaultCryptService();
         sut.setAppConfig(appConfig);
         sut.setFilesService(filesService);
+        sut.setSupportUtils(new SupportUtils());
     }
 
     @Test

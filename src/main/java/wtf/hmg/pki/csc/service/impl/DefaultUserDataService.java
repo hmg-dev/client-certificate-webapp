@@ -32,6 +32,7 @@ import wtf.hmg.pki.csc.model.CertInfo;
 import wtf.hmg.pki.csc.service.FilesService;
 import wtf.hmg.pki.csc.service.UserDataService;
 import wtf.hmg.pki.csc.util.CscUtils;
+import wtf.hmg.pki.csc.util.SupportUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -57,6 +58,8 @@ public class DefaultUserDataService implements UserDataService {
     private AppConfig appConfig;
     @Autowired
     private FilesService filesService;
+    @Autowired
+    private SupportUtils supportUtils;
 
     @Override
     public List<String> findCertificateRequestsForUser(final String userName) {
@@ -115,7 +118,7 @@ public class DefaultUserDataService implements UserDataService {
 
     @Override
     public Resource userCertificateFileAsResource(final String userName, final String filename) throws IOException {
-        Path userPath = appConfig.getStoragePath().resolve(USERS_SUBDIR).resolve(userName).resolve(CERTS_SUBDIR).resolve(normalizeFileName(filename));
+        Path userPath = appConfig.getStoragePath().resolve(USERS_SUBDIR).resolve(userName).resolve(CERTS_SUBDIR).resolve(supportUtils.normalizeFileName(filename));
         if(Files.isRegularFile(userPath)) {
             return new UrlResource(userPath.toUri());
         }
@@ -150,21 +153,14 @@ public class DefaultUserDataService implements UserDataService {
 
     private Path findAndValidateTargetCSRPath(final String userName, final String fileName) throws IOException {
         Path userPath = findAndEnsureUserDirectory(userName);
-        Path csrPath = userPath.resolve(normalizeFileName(fileName));
+        Path csrPath = userPath.resolve(supportUtils.normalizeFileName(fileName));
         if(Files.exists(csrPath)) {
             throw new IOException("Request-File already exists: " + csrPath.getFileName());
         }
 
         return csrPath;
     }
-
-    private String normalizeFileName(final String fileName) {
-        if(StringUtils.contains(fileName, "/")) {
-            return StringUtils.substringAfterLast(fileName, "/");
-        }
-        return fileName;
-    }
-
+    
     private Path findAndEnsureUserDirectory(final String userName) throws IOException {
         Path userPath = appConfig.getStoragePath().resolve(USERS_SUBDIR).resolve(userName);
         if(!Files.exists(userPath)) {
@@ -213,4 +209,7 @@ public class DefaultUserDataService implements UserDataService {
         this.filesService = filesService;
     }
     
+    public void setSupportUtils(final SupportUtils supportUtils) {
+        this.supportUtils = supportUtils;
+    }
 }

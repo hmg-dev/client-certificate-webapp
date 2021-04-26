@@ -29,6 +29,7 @@ import wtf.hmg.pki.csc.model.CSR;
 import wtf.hmg.pki.csc.model.CertInfo;
 import wtf.hmg.pki.csc.service.FilesService;
 import wtf.hmg.pki.csc.util.CscUtils;
+import wtf.hmg.pki.csc.util.SupportUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -49,6 +50,8 @@ public class DefaultAdminDataService implements wtf.hmg.pki.csc.service.AdminDat
     private AppConfig appConfig;
     @Autowired
     private FilesService filesService;
+    @Autowired
+    private SupportUtils supportUtils;
 
     @Override
     public List<CSR> findPendingCertificateRequests() {
@@ -104,7 +107,7 @@ public class DefaultAdminDataService implements wtf.hmg.pki.csc.service.AdminDat
         b.csrFile(path);
         b.csrInfo(CscUtils.extractCSRInfo(path));
         b.userName(userFolder.getFileName().toString());
-        b.lastModified(determineLastModified(path));
+        b.lastModified(supportUtils.determineLastModified(path));
         b.lastRenewed(determineLastRenewed(path));
         b.renewalRequested(Files.isRegularFile(certFile));
 
@@ -119,7 +122,7 @@ public class DefaultAdminDataService implements wtf.hmg.pki.csc.service.AdminDat
         CertInfo.Builder b = new CertInfo.Builder();
         b.certFile(path);
         b.userName(userFolder.getFileName().toString());
-        b.lastModified(determineLastModified(path));
+        b.lastModified(supportUtils.determineLastModified(path));
         
         return b.build();
     }
@@ -127,18 +130,10 @@ public class DefaultAdminDataService implements wtf.hmg.pki.csc.service.AdminDat
     private Temporal determineLastRenewed(final Path path) {
         Path renewPath = path.getParent().resolve(path.getFileName().toString() + ".renewed");
         if(Files.isRegularFile(renewPath)) {
-            return determineLastModified(renewPath);
+            return supportUtils.determineLastModified(renewPath);
         }
         
         return null;
-    }
-    
-    private Temporal determineLastModified(final Path path) {
-        try {
-            return Files.getLastModifiedTime(path).toInstant();
-        } catch (IOException e) {
-            throw new IllegalStateException("Unable to determine lastModifiedDate of: " + path, e);
-        }
     }
     
     @Override
@@ -217,4 +212,7 @@ public class DefaultAdminDataService implements wtf.hmg.pki.csc.service.AdminDat
         this.filesService = filesService;
     }
     
+    public void setSupportUtils(final SupportUtils supportUtils) {
+        this.supportUtils = supportUtils;
+    }
 }

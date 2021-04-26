@@ -8,9 +8,13 @@ RUN DEBIAN_FRONTEND=noninteractive \
     rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /opt/logs
+RUN mkdir -p /opt/scripts
 RUN mkdir -p /data/projects/csc/users
 
 COPY target/pki-web.jar /opt/pki-web.jar
+COPY src/main/bash/* /opt/scripts/
+
+RUN chmod +x /opt/scripts/*
 
 VOLUME /opt/config
 VOLUME /data/projects/csc

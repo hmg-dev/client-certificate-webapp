@@ -27,9 +27,9 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import wtf.hmg.pki.csc.config.AppConfig;
 import wtf.hmg.pki.csc.service.FilesService;
+import wtf.hmg.pki.csc.util.SupportUtils;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -50,11 +50,11 @@ public class DefaultCryptServiceTest {
     private String dummySalt = "CEED";
 
     @Mock
-    private ProcessBuilder processBuilder;
-    @Mock
     private FilesService filesService;
     @Mock
     private Process dummyProcess;
+    @Mock
+    private SupportUtils supportUtils;
 
     @Before
     public void setUp() throws IOException {
@@ -62,91 +62,59 @@ public class DefaultCryptServiceTest {
         appConfig.setCryptSalt(dummySalt);
         appConfig.setStoragePath(dummyStoragePath);
 
-        sut = new DefaultCryptService() {
-            protected ProcessBuilder processBuilder() {
-                return processBuilder;
-            }
-        };
+        sut = new DefaultCryptService();
         sut.setAppConfig(appConfig);
         sut.setFilesService(filesService);
-
-        given(processBuilder.start()).willReturn(dummyProcess);
+        sut.setSupportUtils(supportUtils);
     }
 
     @Test
-    public void testDecryptFileForExecutionError() throws IOException, InterruptedException {
+    public void testDecryptFileForExecutionError() throws IOException {
         Path input = dummyStoragePath.resolve("cert-repo/enc.pem");
+        String expectedFilePath = input.toString();
         String dummyPassword = "NARF";
 
-        doThrow(new InterruptedException("TEST")).when(dummyProcess).waitFor();
+        doThrow(new IllegalStateException("TEST")).when(supportUtils).runCommandLine(anyString(), any());
 
         try {
             sut.decryptFile(input, dummyPassword);
             fail();
         } catch (IllegalStateException e) {
             assertNotNull(e);
-            assertNotNull(e.getCause());
+            assertNotNull(e.getMessage());
         }
-
-        verify(processBuilder, times(1)).start();
-        verify(dummyProcess, times(1)).waitFor();
+        
+        verify(supportUtils, times(1)).runCommandLine("Decrypting file",
+                "openssl", "enc", "-d", "-aes256", "-a", "-S", appConfig.getCryptSalt(), "-pbkdf2",
+                "-iter", "20000", "-pass", "pass:"+dummyPassword, "-in", expectedFilePath, "-out", expectedFilePath+".tmp");
         verifyNoInteractions(filesService);
     }
 
     @Test
-    public void testDecryptFileForErrorResult() throws IOException, InterruptedException {
-        Path input = dummyStoragePath.resolve("cert-repo/enc.pem");
-        String dummyPassword = "NARF";
-        InputStream errorStream = mock(InputStream.class);
-
-        given(dummyProcess.waitFor()).willReturn(1);
-        given(dummyProcess.getErrorStream()).willReturn(errorStream);
-
-        try {
-            sut.decryptFile(input, dummyPassword);
-            fail();
-        } catch (IllegalStateException e) {
-            assertNotNull(e);
-            assertNull(e.getCause());
-        }
-
-        verify(processBuilder, times(1)).start();
-        verify(dummyProcess, times(1)).waitFor();
-        verify(dummyProcess, times(1)).getErrorStream();
-        verifyNoInteractions(filesService);
-    }
-
-    @Test
-    public void testDecryptFile() throws IOException, InterruptedException {
+    public void testDecryptFile() throws IOException {
         Path input = dummyStoragePath.resolve("cert-repo/enc.pem");
         Path expectedOutput = dummyStoragePath.resolve("cert-repo/enc.pem.tmp");
         String dummyPassword = "NARF";
 
         sut.decryptFile(input, dummyPassword);
 
-        verify(processBuilder, times(1))
-                .command("openssl", "enc", "-d", "-aes256", "-a", "-S", dummySalt, "-pbkdf2",
-                        "-iter", "20000", "-pass", "pass:"+dummyPassword, "-in", input.toString(),
-                        "-out", input.toString() + ".tmp");
-        verify(processBuilder, times(1)).start();
-        verify(dummyProcess, times(1)).waitFor();
+        verify(supportUtils, times(1))
+                .runCommandLine("Decrypting file","openssl", "enc", "-d", "-aes256", "-a", "-S", dummySalt, "-pbkdf2",
+                        "-iter", "20000", "-pass", "pass:"+dummyPassword, "-in", input.toString(), "-out", input.toString() + ".tmp");
         verify(filesService, times(1)).move(expectedOutput, input, StandardCopyOption.REPLACE_EXISTING);
     }
 
     @Test
-    public void testEncryptFile() throws IOException, InterruptedException {
+    public void testEncryptFile() throws IOException {
         Path input = dummyStoragePath.resolve("cert-repo/enc.pem");
         Path expectedOutput = dummyStoragePath.resolve("cert-repo/enc.pem.tmp");
         String dummyPassword = "NARF";
 
         sut.encryptFile(input, dummyPassword);
 
-        verify(processBuilder, times(1))
-                .command("openssl", "enc", "-aes256", "-a", "-S", dummySalt, "-pbkdf2",
-                        "-iter", "20000", "-pass", "pass:"+dummyPassword, "-in", input.toString(),
-                        "-out", input.toString() + ".tmp");
-        verify(processBuilder, times(1)).start();
-        verify(dummyProcess, times(1)).waitFor();
+        verify(supportUtils, times(1))
+                .runCommandLine("Encrypting file","openssl", "enc", "-aes256", "-a", "-S", dummySalt, "-pbkdf2",
+                        "-iter", "20000", "-pass", "pass:"+dummyPassword, "-in", input.toString(), "-out", input.toString() + ".tmp");
         verify(filesService, times(1)).move(expectedOutput, input, StandardCopyOption.REPLACE_EXISTING);
     }
 
@@ -167,29 +135,28 @@ public class DefaultCryptServiceTest {
                 "Certificate is in: \n" +
                 certLocation;
 
+        given(supportUtils.runCommandLine(anyString(), any())).willReturn(dummyProcess);
         given(dummyProcess.getInputStream()).willReturn(IOUtils.toInputStream(dummySignScriptOutput, Charset.defaultCharset()));
 
         Path result = sut.signCertificateRequest(input, keyPassword);
         assertNotNull(result);
         assertEquals(expectedResult, result);
 
-        verify(processBuilder, times(1)).command(script.toString(),
+        verify(supportUtils, times(1)).runCommandLine("Sign CSR", script.toString(),
                 script.getParent().toString(), input.toString(), keyPassword);
         verify(dummyProcess, times(1)).getInputStream();
     }
 
     @Test
-    public void testRevokeCertificate() throws IOException, InterruptedException {
+    public void testRevokeCertificate() throws IOException {
         Path script = dummyStoragePath.resolve("cert-repo/revoke-cert.sh");
         Path input = dummyStoragePath.resolve("users/user1/certs/user1.crt.pem");
         String keyPassword = "NARF";
 
         sut.revokeCertificate(input, keyPassword);
 
-        verify(processBuilder, times(1)).command(script.toString(),
+        verify(supportUtils, times(1)).runCommandLine("Revoke Certificate", script.toString(),
                 script.getParent().toString(), input.toString(), keyPassword);
-        verify(processBuilder, times(1)).start();
-        verify(dummyProcess, times(1)).waitFor();
     }
 
 }

@@ -32,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 import wtf.hmg.pki.csc.config.AppConfig;
 import wtf.hmg.pki.csc.model.CertInfo;
 import wtf.hmg.pki.csc.service.FilesService;
+import wtf.hmg.pki.csc.util.SupportUtils;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -56,6 +57,8 @@ public class DefaultUserDataServiceTest {
     
     @Mock
     private FilesService filesService;
+    @Mock
+    private SupportUtils supportUtils;
 
     @BeforeClass
     public static void init() throws IOException {
@@ -74,6 +77,7 @@ public class DefaultUserDataServiceTest {
         sut = new DefaultUserDataService();
         sut.setAppConfig(appConfig);
         sut.setFilesService(filesService);
+        sut.setSupportUtils(supportUtils);
     }
 
     @Test
@@ -181,17 +185,25 @@ public class DefaultUserDataServiceTest {
         String dummyFilename = "user0.crt.pem";
         String userName = "user0";
 
+        given(supportUtils.normalizeFileName(dummyFilename)).willReturn(dummyFilename);
+        
         Resource resource = sut.userCertificateFileAsResource(userName, dummyFilename);
         assertNull(resource);
+        
+        verify(supportUtils, times(1)).normalizeFileName(dummyFilename);
     }
 
     @Test
     public void testUserCertificateFileAsResourceForExploitFile() throws IOException {
         String dummyFilename = "../../user1/certs/user1-cert.crt.pem";
         String userName = "user0";
-
+    
+        given(supportUtils.normalizeFileName(dummyFilename)).willReturn("user1-cert.crt.pem");
+        
         Resource resource = sut.userCertificateFileAsResource(userName, dummyFilename);
         assertNull(resource);
+        
+        verify(supportUtils, times(1)).normalizeFileName(dummyFilename);
     }
 
     @Test
@@ -199,6 +211,8 @@ public class DefaultUserDataServiceTest {
         String dummyFilename = "user1.crt.pem";
         String userName = "user1";
 
+        given(supportUtils.normalizeFileName(dummyFilename)).willReturn(dummyFilename);
+        
         Resource resource = sut.userCertificateFileAsResource(userName, dummyFilename);
         assertNotNull(resource);
         assertEquals(dummyFilename, resource.getFilename());
@@ -206,6 +220,8 @@ public class DefaultUserDataServiceTest {
         assertTrue(resource.exists());
         assertNotNull(resource.getFile());
         assertEquals("DUMMY-CERT", new String(Files.readAllBytes(resource.getFile().toPath())));
+        
+        verify(supportUtils, times(1)).normalizeFileName(dummyFilename);
     }
 
     @Test
@@ -236,9 +252,11 @@ public class DefaultUserDataServiceTest {
     public void testSaveUplaodedCSRForExistingRequest() throws IOException, URISyntaxException {
         MultipartFile file = mock(MultipartFile.class);
         Path dummyCSR = Paths.get(ClassLoader.getSystemResource("dummy.csr.pem").toURI());
+        String dummyFileName = "user1.csr.pem";
 
-        given(file.getOriginalFilename()).willReturn("user1.csr.pem");
+        given(file.getOriginalFilename()).willReturn(dummyFileName);
         given(file.getBytes()).willReturn(Files.readAllBytes(dummyCSR));
+        given(supportUtils.normalizeFileName(dummyFileName)).willReturn(dummyFileName);
 
         sut.saveUploadedCSR("user1", file);
         fail("Expected Exception for existing request!");
@@ -265,12 +283,14 @@ public class DefaultUserDataServiceTest {
 
         given(file.getBytes()).willReturn(Files.readAllBytes(dummyCSR));
         given(file.getOriginalFilename()).willReturn(fileName);
+        given(supportUtils.normalizeFileName(anyString())).willReturn(fileName);
 
         sut.saveUploadedCSR(userID, file);
 
         assertTrue(Files.isDirectory(userDir));
         verify(file, atLeastOnce()).getOriginalFilename();
         verify(file, times(1)).transferTo(csrPath);
+        verify(supportUtils, times(1)).normalizeFileName(fileName);
     }
 
     @Test(expected = IOException.class)
@@ -279,6 +299,8 @@ public class DefaultUserDataServiceTest {
         String dummyCSRData = "NARF";
         String dummyCSRFileName = userID + ".csr.pem";
 
+        given(supportUtils.normalizeFileName(dummyCSRFileName)).willReturn(dummyCSRFileName);
+        
         sut.saveUploadedCSR(userID, dummyCSRFileName, dummyCSRData);
         fail("Expected Exception for existing request!");
     }
@@ -293,12 +315,16 @@ public class DefaultUserDataServiceTest {
         Path userDir = dummyStoragePath.resolve("users").resolve(userID);
         Path csrPath = userDir.resolve(dummyCSRFileName);
         Path exploitPath = dummyStoragePath.resolve("users").resolve(dummyCSRFileName);
-
+    
+        given(supportUtils.normalizeFileName(anyString())).willReturn(dummyCSRFileName);
+        
         sut.saveUploadedCSR(userID, exploitFilename, dummyCSRData);
 
         assertTrue(Files.isDirectory(userDir));
         assertTrue(Files.isRegularFile(csrPath));
         assertFalse(Files.exists(exploitPath));
+        
+        verify(supportUtils, times(1)).normalizeFileName(exploitFilename);
     }
 
     @Test
@@ -310,6 +336,8 @@ public class DefaultUserDataServiceTest {
         Path userDir = dummyStoragePath.resolve("users").resolve(userID);
         Path csrPath = userDir.resolve(dummyCSRFileName);
 
+        given(supportUtils.normalizeFileName(dummyCSRFileName)).willReturn(dummyCSRFileName);
+        
         sut.saveUploadedCSR(userID, dummyCSRFileName, dummyCSRData);
 
         assertTrue(Files.isDirectory(userDir));
@@ -319,6 +347,8 @@ public class DefaultUserDataServiceTest {
         assertNotNull(csrFile);
         assertEquals(1, csrFile.size());
         assertEquals(dummyCSRData, csrFile.get(0));
+        
+        verify(supportUtils, times(1)).normalizeFileName(dummyCSRFileName);
     }
 
     @Test

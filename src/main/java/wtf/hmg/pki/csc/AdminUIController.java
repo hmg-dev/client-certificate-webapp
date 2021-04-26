@@ -34,7 +34,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import wtf.hmg.pki.csc.model.CSR;
 import wtf.hmg.pki.csc.model.CertInfo;
 import wtf.hmg.pki.csc.service.AdminDataService;
-import wtf.hmg.pki.csc.service.CertificateService;
 import wtf.hmg.pki.csc.service.CryptService;
 import wtf.hmg.pki.csc.util.CscUtils;
 
@@ -44,14 +43,12 @@ import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Controller
-public class AdminUIController {
+public class AdminUIController extends AbstractCertificateController {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     @Autowired
     private AdminDataService adminDataService;
-    @Autowired
-    private CertificateService certificateService;
     @Autowired
     private CryptService cryptService;
 
@@ -118,9 +115,8 @@ public class AdminUIController {
         Path csrFile = certificateService.copyUserCSRToRepository(userName,fileName);
         Path certFile = cryptService.signCertificateRequest(csrFile, keyPassword);
         certificateService.copyCertificateToUserDirectory(userName, certFile);
-        certificateService.encryptWorkingFiles(cryptPassword);
+        finishWorkspace(cryptPassword, operatingUser, "Signed User-Certificate");
         adminDataService.acceptUserCSR(userName, fileName);
-        certificateService.commitAndPushChanges(operatingUser, "Signed User-Certificate");
     }
     
     @PostMapping("/renewCert")
@@ -175,8 +171,7 @@ public class AdminUIController {
             Path cert = findUserCertForRequest(CscUtils.normalizeUserName(userName), fileName);
             cryptService.revokeCertificate(cert, keyPassword);
             adminDataService.flagRevokedUserCertAndCSR(CscUtils.normalizeUserName(userName), fileName);
-            certificateService.encryptWorkingFiles(cryptPassword);
-            certificateService.commitAndPushChanges(operatingUser, "Revoked User-Certificate");
+            finishWorkspace(cryptPassword, operatingUser, "Revoked User-Certificate");
             redirectAttributes.addFlashAttribute("message", "Certificate has been successfully revoked!");
         } catch (GitAPIException | IOException | IllegalStateException e) {
             log.error("Unable to revoke CSR!", e);
@@ -195,19 +190,9 @@ public class AdminUIController {
         }
         return cert;
     }
-
-    private void prepareWorkspace(final String cryptPassword) throws IOException, GitAPIException {
-        certificateService.cleanupWorkingFiles();
-        certificateService.cloneCertificateRepository();
-        certificateService.decryptWorkingFiles(cryptPassword);
-    }
-
+    
     public void setAdminDataService(final AdminDataService adminDataService) {
         this.adminDataService = adminDataService;
-    }
-
-    public void setCertificateService(final CertificateService certificateService) {
-        this.certificateService = certificateService;
     }
 
     protected static void setLock(final ReentrantLock lock) {

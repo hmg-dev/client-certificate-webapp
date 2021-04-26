@@ -29,6 +29,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 import wtf.hmg.pki.csc.config.AppConfig;
 import wtf.hmg.pki.csc.service.CryptService;
 import wtf.hmg.pki.csc.service.FilesService;
+import wtf.hmg.pki.csc.service.SharedAppService;
 
 import java.io.File;
 import java.io.IOException;
@@ -170,7 +171,7 @@ public class DefaultCertificateServiceTest {
     }
 
     @Test
-    public void testCopyCSRToRepo() throws IOException {
+    public void testCopyUserCSRToRepository() throws IOException {
         String userName = "user1";
         String csrFileName = "user1.csr.pem";
         Path expectedSource = dummyStoragePath.resolve("users").resolve(userName).resolve(csrFileName);
@@ -180,6 +181,20 @@ public class DefaultCertificateServiceTest {
         assertNotNull(csrInRepo);
         assertEquals(expectedPath, csrInRepo);
 
+        verify(filesService, times(1)).copy(expectedSource, expectedPath, StandardCopyOption.REPLACE_EXISTING);
+    }
+    
+    @Test
+    public void testCopyAppCSRToRepository() throws IOException {
+        String appName = "test-app";
+        String csrFileName = "test-app.csr.pem";
+        Path expectedSource = dummyStoragePath.resolve(SharedAppService.SHARED_APPS_FOLDER).resolve(appName).resolve(csrFileName);
+        Path expectedPath = dummyStoragePath.resolve("cert-repo/intermediate/csr").resolve(csrFileName);
+        
+        Path csrInRepo = sut.copyAppCSRToRepository(appName, csrFileName);
+        assertNotNull(csrInRepo);
+        assertEquals(expectedPath, csrInRepo);
+        
         verify(filesService, times(1)).copy(expectedSource, expectedPath, StandardCopyOption.REPLACE_EXISTING);
     }
 
@@ -192,6 +207,16 @@ public class DefaultCertificateServiceTest {
         sut.copyCertificateToUserDirectory(userName, certFile);
 
         verify(filesService, times(1)).createDirectories(expectedTarget.getParent());
+        verify(filesService, times(1)).copy(certFile, expectedTarget, StandardCopyOption.REPLACE_EXISTING);
+    }
+    
+    @Test
+    public void testCopyCertificateToAppDirectory() throws IOException {
+        String appName = "test-app";
+        Path certFile = dummyStoragePath.resolve("cert-repo/intermediate/certs/test-app.crt.pem");
+        Path expectedTarget = dummyStoragePath.resolve(SharedAppService.SHARED_APPS_FOLDER).resolve(appName).resolve(certFile.getFileName().toString());
+        
+        sut.copyCertificateToAppDirectory(appName, certFile);
         verify(filesService, times(1)).copy(certFile, expectedTarget, StandardCopyOption.REPLACE_EXISTING);
     }
 

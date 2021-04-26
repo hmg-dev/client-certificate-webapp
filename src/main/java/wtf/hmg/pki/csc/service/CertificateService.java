@@ -36,6 +36,10 @@ public interface CertificateService {
     void encryptWorkingFiles(String password) throws IOException;
 
     Path copyUserCSRToRepository(String userName, String csrFileName) throws IOException;
-
-    void copyCertificateToUserDirectory(String userName, Path certFile) throws IOException;
+	
+	Path copyAppCSRToRepository(String appName, String csrFileName) throws IOException;
+	
+	void copyCertificateToUserDirectory(String userName, Path certFile) throws IOException;
+	
+	void copyCertificateToAppDirectory(String appName, Path certFile) throws IOException;
 }

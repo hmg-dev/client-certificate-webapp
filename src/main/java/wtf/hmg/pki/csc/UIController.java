@@ -28,7 +28,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
@@ -38,6 +37,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import wtf.hmg.pki.csc.model.CertInfo;
 import wtf.hmg.pki.csc.service.UserDataService;
+import wtf.hmg.pki.csc.util.SupportUtils;
 import wtf.hmg.pki.csc.util.CscUtils;
 
 import java.io.IOException;
@@ -49,12 +49,12 @@ public class UIController {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private static final String ADMIN_GROUP = "ROLE_DevOps";
-
     @Autowired
     private UserDataService userDataService;
     @Autowired
     private MessageSource messageSource;
+    @Autowired
+    private SupportUtils supportUtils;
 
     @GetMapping("/")
     public String indexPage(final Model model, final OAuth2AuthenticationToken auth) {
@@ -65,10 +65,11 @@ public class UIController {
         List<String> userRejectedCSRList = userDataService.findRejectedCertificateRequestsForUser(uid);
         List<CertInfo> userCertificates = userDataService.findCertificatesForUser(uid);
 
-        boolean isAdmin = user.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority).anyMatch(a -> StringUtils.equals(ADMIN_GROUP, a));
+        boolean isAdmin = supportUtils.isAdmin(user);
+        boolean isSharedAppAdmin = supportUtils.isSharedAppAdmin(user);
 
         model.addAttribute("isAdmin", isAdmin);
+        model.addAttribute("isSharedAppAdmin", isSharedAppAdmin);
         model.addAttribute("user", user);
         model.addAttribute("userCSRList", userCSRList);
         model.addAttribute("userAcceptedCSRList", userAcceptedCSRList);
@@ -227,5 +228,8 @@ public class UIController {
     public void setMessageSource(final MessageSource messageSource) {
         this.messageSource = messageSource;
     }
-
+    
+    public void setSupportUtils(final SupportUtils supportUtils) {
+        this.supportUtils = supportUtils;
+    }
 }

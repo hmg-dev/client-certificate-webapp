@@ -60,8 +60,8 @@ spring.security.oauth2.client.registration.azure.client-secret=#{pki-web-aad-cli
 data.cert-revocation-list-path=/data/shared/crl.list
  
 azure.activedirectory.tenant-id=00000000-0000-0000-0000-000000000000
-azure.activedirectory.user-group.allowed-groups=group1, group2
-azure.activedirectory.active-directory-groups=group1, group2
+azure.activedirectory.user-group.allowed-groups=group1, group2, group3
+azure.activedirectory.active-directory-groups=group1, group2, group3
 azure.activedirectory.authority=https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/
  
 spring.security.oauth2.client.provider.azure.authorization-uri=https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/oauth2/authorize
