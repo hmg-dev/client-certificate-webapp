@@ -30,6 +30,10 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.temporal.Temporal;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -177,5 +181,18 @@ public class SupportUtilsTest {
 		assertEquals("NARF", sut.normalizeFileName("Zort/NARF"));
 		assertEquals("NARF.pem", sut.normalizeFileName("Zort/NARF.pem"));
 		assertEquals("NARF.pem", sut.normalizeFileName("../../Zort/NARF.pem"));
+	}
+	
+	@Test
+	public void testDetermineLastModified() throws URISyntaxException {
+		Path dummyCSR = Paths.get(ClassLoader.getSystemResource("dummy.csr.pem").toURI());
+		Temporal result = sut.determineLastModified(dummyCSR);
+		
+		assertNotNull(result);
+	}
+	
+	@Test(expected = IllegalStateException.class)
+	public void testDetermineLastModifiedForInvalidPath() {
+		sut.determineLastModified(Paths.get("/invalid"));
 	}
 }

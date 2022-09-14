@@ -163,7 +163,7 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
     }
 
     @Test
-    public void testSignCSRForAlreadyLocked() throws GitAPIException, IOException {
+    public void testSignCSRForAlreadyLocked() {
         given(lock.tryLock()).willReturn(false);
 
         String result = sut.signCSR("userName", "fileName", "cryptPassword",

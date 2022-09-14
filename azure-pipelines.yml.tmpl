@@ -1,5 +1,5 @@
 pool:
-  vmImage: 'Ubuntu-18.04'
+  vmImage: 'Ubuntu-20.04'
 
 trigger:
   branches:
@@ -8,6 +8,7 @@ trigger:
 
 variables:
   imageName: 'pki-web'
+  NODE_OPTIONS: '--use-openssl-ca'
 
 steps:
   - task: SonarQubePrepare@4
@@ -22,6 +23,7 @@ steps:
       publishJUnitResults: true
       testResultsFiles: '**/surefire-reports/TEST-*.xml'
       sonarQubeRunAnalysis: true
+      jdkVersionOption: 1.11
 
   - task: Docker@2
     inputs:

@@ -19,32 +19,23 @@
 */
 package wtf.hmg.pki.csc.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import com.azure.spring.aad.webapp.AADWebSecurityConfigurerAdapter;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
-public class WebclientSecurityConfig extends WebSecurityConfigurerAdapter {
-
-    @Autowired
-    private OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService;
+public class WebclientSecurityConfig extends AADWebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+        super.configure(http);
         http.authorizeRequests()
-            .antMatchers("/check", "/list.crl").permitAll()
-            .anyRequest().authenticated()
-            .and().oauth2Login()
-            .userInfoEndpoint()
-            .oidcUserService(oidcUserService);
+            .antMatchers("/check", "/list.crl", "/actuator/health").permitAll()
+            .anyRequest().authenticated();
     }
 
 }

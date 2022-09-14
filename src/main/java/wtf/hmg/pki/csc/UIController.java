@@ -36,6 +36,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import wtf.hmg.pki.csc.model.CertInfo;
+import wtf.hmg.pki.csc.service.NotificationService;
 import wtf.hmg.pki.csc.service.UserDataService;
 import wtf.hmg.pki.csc.util.SupportUtils;
 import wtf.hmg.pki.csc.util.CscUtils;
@@ -55,6 +56,8 @@ public class UIController {
     private MessageSource messageSource;
     @Autowired
     private SupportUtils supportUtils;
+    @Autowired
+    private NotificationService notificationService;
 
     @GetMapping("/")
     public String indexPage(final Model model, final OAuth2AuthenticationToken auth) {
@@ -91,8 +94,10 @@ public class UIController {
         String uid = determineUID(auth);
         try {
             userDataService.requestRenewalForCert(uid, fileName);
-            redirectAttributes.addFlashAttribute("message",
-                    messageSource.getMessage("user.request.renew.success", null, locale));
+            redirectAttributes.addFlashAttribute("message", messageSource.getMessage("user.request.renew.success", null, locale));
+            notificationService.sendNotificationAsync(
+                    messageSource.getMessage("user.request.renew.notification.subject", null, Locale.GERMAN),
+                    messageSource.getMessage("user.request.renew.notification.text", new Object[]{uid, fileName}, Locale.GERMAN));
         } catch (IOException e) {
             log.info("Failed User-Interaction 'requestRenew': ", e);
             redirectAttributes.addFlashAttribute("errorMessage",
@@ -177,6 +182,7 @@ public class UIController {
             userDataService.saveUploadedCSR(uid, file);
             redirectAttributes.addFlashAttribute("message",
                     messageSource.getMessage("user.request.file.success", null, locale));
+            sendCsrNotification(uid);
         } catch (IOException e) {
             log.info("Failed User-Interaction 'csrFile': ", e);
             redirectAttributes.addFlashAttribute("errorMessage",
@@ -203,6 +209,7 @@ public class UIController {
             userDataService.saveUploadedCSR(uid, fileName, csrText);
             redirectAttributes.addFlashAttribute("message",
                     messageSource.getMessage("user.request.text.success", null, locale));
+            sendCsrNotification(uid);
         } catch (IOException e) {
             log.info("Failed User-Interaction 'csrText': ", e);
             redirectAttributes.addFlashAttribute("errorMessage",
@@ -212,13 +219,19 @@ public class UIController {
         return "redirect:/";
     }
 
+    private void sendCsrNotification(final String uid) {
+        notificationService.sendNotificationAsync(
+                messageSource.getMessage("user.request.notification.subject", null, Locale.GERMAN),
+                messageSource.getMessage("user.request.notification.text", new Object[]{uid}, Locale.GERMAN));
+    }
+    
     private String determineUID(final OAuth2AuthenticationToken auth) {
         OAuth2User user = auth.getPrincipal();
         return determineUID(user);
     }
 
     private String determineUID(final OAuth2User user) {
-        return CscUtils.normalizeUserName(StringUtils.lowerCase(user.getAttribute("unique_name")));
+        return CscUtils.normalizeUserName(StringUtils.lowerCase(user.getAttribute("email")));
     }
 
     public void setUserDataService(final UserDataService userDataService) {
@@ -231,5 +244,9 @@ public class UIController {
     
     public void setSupportUtils(final SupportUtils supportUtils) {
         this.supportUtils = supportUtils;
+    }
+    
+    public void setNotificationService(final NotificationService notificationService) {
+        this.notificationService = notificationService;
     }
 }

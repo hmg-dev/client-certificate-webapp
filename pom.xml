@@ -5,43 +5,41 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.3.9.RELEASE</version>
+		<version>2.7.3</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>wtf.hmg</groupId>
 	<artifactId>pki-web</artifactId>
-	<version>0.3.0-SNAPSHOT</version>
+	<version>0.5.0-SNAPSHOT</version>
 	<name>pki-web</name>
 	<description>Web-Application to manage PKI - mainly client-side-certificates</description>
 	
 	<properties>
-		<java.version>1.8</java.version>
+		<java.version>11</java.version>
+		<azure.version>3.14.0</azure.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
-			<groupId>org.springframework.security</groupId>
-			<artifactId>spring-security-oauth2-client</artifactId>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.springframework.security</groupId>
-			<artifactId>spring-security-oauth2-jose</artifactId>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-oauth2-client</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.microsoft.azure</groupId>
-			<artifactId>azure-active-directory-spring-boot-starter</artifactId>
-			<version>2.3.5</version>
-			<exclusions>
-				<exclusion>
-					<artifactId>azure-spring-boot</artifactId>
-					<groupId>com.microsoft.azure</groupId>
-				</exclusion>
-			</exclusions>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.microsoft.azure</groupId>
-			<artifactId>azure-spring-boot</artifactId>
-			<version>2.3.5</version>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.azure.spring</groupId>
+			<artifactId>azure-spring-boot-starter-active-directory</artifactId>
+			<version>${azure.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -49,12 +47,11 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-devtools</artifactId>
-			<optional>true</optional>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+			<groupId>org.thymeleaf.extras</groupId>
+			<artifactId>thymeleaf-extras-springsecurity5</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -68,17 +65,17 @@
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcpkix-jdk15to18</artifactId>
-			<version>1.68</version>
+			<version>1.71</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.jgit</groupId>
 			<artifactId>org.eclipse.jgit</artifactId>
-			<version>5.6.1.202002131546-r</version>
+			<version>6.3.0.202209071007-r</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.jgit</groupId>
 			<artifactId>org.eclipse.jgit.ssh.apache</artifactId>
-			<version>5.6.1.202002131546-r</version>
+			<version>6.3.0.202209071007-r</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-io</groupId>
@@ -104,6 +101,13 @@
 			<groupId>org.slf4j</groupId>
 			<artifactId>jcl-over-slf4j</artifactId>
 			<version>${slf4j.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
 		</dependency>
 
 		<dependency>

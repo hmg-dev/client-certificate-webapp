@@ -145,6 +145,7 @@ public class DefaultSharedAppService implements SharedAppService {
 		
 		if(cert != null) {
 			b.setCertLastModified(supportUtils.determineLastModified(cert));
+			b.setCertValidTo(CscUtils.extractCertValidToDate(cert));
 		}
 		if(csr != null) {
 			b.setCsrLastModified(supportUtils.determineLastModified(csr));

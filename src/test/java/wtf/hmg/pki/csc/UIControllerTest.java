@@ -32,6 +32,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import wtf.hmg.pki.csc.service.NotificationService;
 import wtf.hmg.pki.csc.service.UserDataService;
 import wtf.hmg.pki.csc.util.SupportUtils;
 
@@ -65,6 +66,8 @@ public class UIControllerTest {
     @Mock
     private UserDataService userDataService;
     @Mock
+    private NotificationService notificationService;
+    @Mock
     private MessageSource messageSource;
     @Mock
     private Locale dummyLocale;
@@ -73,6 +76,8 @@ public class UIControllerTest {
 
     private String dummyUID = "T.User@company.domain";
     private String expectedUID = "t.user_company.domain";
+    private String mailSubject = "Dummy notification subject";
+    private String mailText = "Dummy notification text";
 
     @Before
     public void setUp() {
@@ -80,9 +85,10 @@ public class UIControllerTest {
         sut.setUserDataService(userDataService);
         sut.setMessageSource(messageSource);
         sut.setSupportUtils(supportUtils);
+        sut.setNotificationService(notificationService);
 
         given(auth.getPrincipal()).willReturn(user);
-        given(user.getAttribute("unique_name")).willReturn(dummyUID);
+        given(user.getAttribute("email")).willReturn(dummyUID);
     }
 
     @Test
@@ -97,7 +103,7 @@ public class UIControllerTest {
 
         verify(auth, atLeastOnce()).getPrincipal();
         verify(model, times(1)).addAttribute("user", user);
-        verify(user, atLeastOnce()).getAttribute("unique_name");
+        verify(user, atLeastOnce()).getAttribute("email");
         verify(supportUtils, atLeastOnce()).isAdmin(user);
         verify(supportUtils, atLeastOnce()).isSharedAppAdmin(user);
 
@@ -124,7 +130,7 @@ public class UIControllerTest {
         assertEquals(400, result.getStatusCodeValue());
 
         verify(auth, atLeastOnce()).getPrincipal();
-        verify(user, atLeastOnce()).getAttribute("unique_name");
+        verify(user, atLeastOnce()).getAttribute("email");
         verify(userDataService, times(1)).userCertificateFileAsResource(expectedUID, dummyFileName);
     }
 
@@ -139,7 +145,7 @@ public class UIControllerTest {
         assertEquals(404, result.getStatusCodeValue());
 
         verify(auth, atLeastOnce()).getPrincipal();
-        verify(user, atLeastOnce()).getAttribute("unique_name");
+        verify(user, atLeastOnce()).getAttribute("email");
         verify(userDataService, times(1)).userCertificateFileAsResource(expectedUID, dummyFileName);
     }
 
@@ -162,7 +168,7 @@ public class UIControllerTest {
         assertEquals(dummyFileName, result.getHeaders().getContentDisposition().getFilename());
 
         verify(auth, atLeastOnce()).getPrincipal();
-        verify(user, atLeastOnce()).getAttribute("unique_name");
+        verify(user, atLeastOnce()).getAttribute("email");
         verify(userDataService, times(1)).userCertificateFileAsResource(expectedUID, dummyFileName);
     }
 
@@ -240,10 +246,11 @@ public class UIControllerTest {
         assertEquals("redirect:/", result);
 
         verify(auth, atLeastOnce()).getPrincipal();
-        verify(user, atLeastOnce()).getAttribute("unique_name");
+        verify(user, atLeastOnce()).getAttribute("email");
         verify(userDataService, times(1)).saveUploadedCSR(any(), any(MultipartFile.class));
         verify(messageSource, times(1)).getMessage(eq("user.request.file.error"), any(), eq(dummyLocale));
         verify(redirectAttributes, atLeastOnce()).addFlashAttribute("errorMessage", errorMessage);
+        verifyNoInteractions(notificationService);
     }
 
     @Test
@@ -266,16 +273,19 @@ public class UIControllerTest {
         assertEquals("redirect:/", result);
 
         verify(auth, never()).getPrincipal();
-        verify(user, never()).getAttribute("unique_name");
+        verify(user, never()).getAttribute("email");
         verify(userDataService, never()).saveUploadedCSR(any(), any(MultipartFile.class));
         verify(messageSource, times(1)).getMessage(eq("user.request.file.invalid"), any(), eq(dummyLocale));
         verify(redirectAttributes, atLeastOnce()).addFlashAttribute("errorMessage", errorMessage);
+        verifyNoInteractions(notificationService);
     }
 
     @Test
     public void testCsrFile() throws IOException {
         String successMessage = "It works!";
         given(messageSource.getMessage(eq("user.request.file.success"), any(), eq(dummyLocale))).willReturn(successMessage);
+        given(messageSource.getMessage(eq("user.request.notification.subject"), any(), any(Locale.class))).willReturn(mailSubject);
+        given(messageSource.getMessage(eq("user.request.notification.text"), any(), any(Locale.class))).willReturn(mailText);
         given(dummyFile.getOriginalFilename()).willReturn("user.csr.pem");
 
         String result = sut.csrFile(dummyFile, dummyLocale, redirectAttributes, auth);
@@ -283,10 +293,13 @@ public class UIControllerTest {
         assertEquals("redirect:/", result);
 
         verify(auth, atLeastOnce()).getPrincipal();
-        verify(user, atLeastOnce()).getAttribute("unique_name");
+        verify(user, atLeastOnce()).getAttribute("email");
         verify(userDataService, times(1)).saveUploadedCSR(any(), any(MultipartFile.class));
         verify(messageSource, times(1)).getMessage(eq("user.request.file.success"), any(), eq(dummyLocale));
         verify(redirectAttributes, atLeastOnce()).addFlashAttribute("message", successMessage);
+        verify(messageSource, times(1)).getMessage(eq("user.request.notification.subject"), any(), eq(Locale.GERMAN));
+        verify(messageSource, times(1)).getMessage(eq("user.request.notification.text"), any(), eq(Locale.GERMAN));
+        verify(notificationService, times(1)).sendNotificationAsync(mailSubject, mailText);
     }
 
     @Test
@@ -301,10 +314,11 @@ public class UIControllerTest {
         assertEquals("redirect:/", result);
 
         verify(auth, never()).getPrincipal();
-        verify(user, never()).getAttribute("unique_name");
+        verify(user, never()).getAttribute("email");
         verify(userDataService, never()).saveUploadedCSR(anyString(), anyString(), anyString());
         verify(messageSource, times(1)).getMessage(eq("user.request.text.invalid"), any(), eq(dummyLocale));
         verify(redirectAttributes, atLeastOnce()).addFlashAttribute("errorMessage", errorMessage);
+        verifyNoInteractions(notificationService);
     }
 
     @Test
@@ -319,10 +333,11 @@ public class UIControllerTest {
         assertEquals("redirect:/", result);
 
         verify(auth, atLeastOnce()).getPrincipal();
-        verify(user, atLeastOnce()).getAttribute("unique_name");
+        verify(user, atLeastOnce()).getAttribute("email");
         verify(userDataService, times(1)).saveUploadedCSR(any(), anyString(), anyString());
         verify(messageSource, times(1)).getMessage(eq("user.request.text.error"), any(), eq(dummyLocale));
         verify(redirectAttributes, atLeastOnce()).addFlashAttribute("errorMessage", errorMessage);
+        verifyNoInteractions(notificationService);
     }
 
     @Test
@@ -332,16 +347,21 @@ public class UIControllerTest {
         String expectedFileName = expectedUID + ".csr.pem";
 
         given(messageSource.getMessage(eq("user.request.text.success"), any(), eq(dummyLocale))).willReturn(successMessage);
-
+        given(messageSource.getMessage(eq("user.request.notification.subject"), any(), any(Locale.class))).willReturn(mailSubject);
+        given(messageSource.getMessage(eq("user.request.notification.text"), any(), any(Locale.class))).willReturn(mailText);
+        
         String result = sut.csrText(dummyCsr, dummyLocale, redirectAttributes, auth);
         assertNotNull(result);
         assertEquals("redirect:/", result);
 
         verify(auth, atLeastOnce()).getPrincipal();
-        verify(user, atLeastOnce()).getAttribute("unique_name");
+        verify(user, atLeastOnce()).getAttribute("email");
         verify(userDataService, times(1)).saveUploadedCSR(expectedUID, expectedFileName, dummyCsr);
         verify(messageSource, times(1)).getMessage(eq("user.request.text.success"), any(), eq(dummyLocale));
         verify(redirectAttributes, atLeastOnce()).addFlashAttribute("message", successMessage);
+        verify(messageSource, times(1)).getMessage(eq("user.request.notification.subject"), any(), eq(Locale.GERMAN));
+        verify(messageSource, times(1)).getMessage(eq("user.request.notification.text"), any(), eq(Locale.GERMAN));
+        verify(notificationService, times(1)).sendNotificationAsync(mailSubject, mailText);
     }
 
     private String readValidDummyCSR() throws URISyntaxException, IOException {
@@ -362,6 +382,7 @@ public class UIControllerTest {
         verify(user, never()).getAttribute("unique_name");
         verify(redirectAttributes, atLeastOnce()).addFlashAttribute("errorMessage", errorMessage);
         verify(userDataService, never()).requestRenewalForCert(anyString(), anyString());
+        verifyNoInteractions(notificationService);
     }
     
     @Test
@@ -375,24 +396,31 @@ public class UIControllerTest {
         assertEquals("redirect:/", result);
         
         verify(auth, atLeastOnce()).getPrincipal();
-        verify(user, atLeastOnce()).getAttribute("unique_name");
+        verify(user, atLeastOnce()).getAttribute("email");
         verify(redirectAttributes, atLeastOnce()).addFlashAttribute("errorMessage", errorMessage);
         verify(userDataService, times(1)).requestRenewalForCert(anyString(), anyString());
+        verifyNoInteractions(notificationService);
     }
     
     @Test
     public void testRequestRenew() throws IOException {
         String successMessage = "Dummy Success - renew requested!";
         given(messageSource.getMessage(eq("user.request.renew.success"), any(), eq(dummyLocale))).willReturn(successMessage);
+        given(messageSource.getMessage(eq("user.request.renew.notification.subject"), any(), any(Locale.class))).willReturn(mailSubject);
+        given(messageSource.getMessage(eq("user.request.renew.notification.text"), any(), any(Locale.class))).willReturn(mailText);
         
         String result = sut.requestRenew("user1.crt.pem", dummyLocale, redirectAttributes, auth);
         assertNotNull(result);
         assertEquals("redirect:/", result);
         
         verify(auth, atLeastOnce()).getPrincipal();
-        verify(user, atLeastOnce()).getAttribute("unique_name");
+        verify(user, atLeastOnce()).getAttribute("email");
         verify(redirectAttributes, atLeastOnce()).addFlashAttribute("message", successMessage);
         verify(redirectAttributes, never()).addFlashAttribute(eq("errorMessage"), anyString());
         verify(userDataService, times(1)).requestRenewalForCert(anyString(), anyString());
+        verify(messageSource, times(1)).getMessage(eq("user.request.renew.success"), any(), eq(dummyLocale));
+        verify(messageSource, times(1)).getMessage(eq("user.request.renew.notification.subject"), any(), eq(Locale.GERMAN));
+        verify(messageSource, times(1)).getMessage(eq("user.request.renew.notification.text"), any(), eq(Locale.GERMAN));
+        verify(notificationService, times(1)).sendNotificationAsync(mailSubject, mailText);
     }
 }

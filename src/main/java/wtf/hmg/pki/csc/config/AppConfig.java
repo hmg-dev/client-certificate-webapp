@@ -23,6 +23,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 import java.nio.file.Path;
+import java.util.List;
 
 @Configuration
 @ConfigurationProperties("data")
@@ -33,7 +34,11 @@ public class AppConfig {
     private String cryptSalt;
     private Path certRevocationListPath;
     private Path scriptsPath;
-
+    
+    private List<String> notificationRecipients;
+    private String notificationSender;
+    private boolean notificationsEnabled;
+    
     public Path getStoragePath() {
         return storagePath;
     }
@@ -80,5 +85,29 @@ public class AppConfig {
     
     public void setScriptsPath(final Path scriptsPath) {
         this.scriptsPath = scriptsPath;
+    }
+    
+    public List<String> getNotificationRecipients() {
+        return notificationRecipients;
+    }
+    
+    public void setNotificationRecipients(final List<String> notificationRecipients) {
+        this.notificationRecipients = notificationRecipients;
+    }
+    
+    public String getNotificationSender() {
+        return notificationSender;
+    }
+    
+    public void setNotificationSender(final String notificationSender) {
+        this.notificationSender = notificationSender;
+    }
+    
+    public boolean isNotificationsEnabled() {
+        return notificationsEnabled;
+    }
+    
+    public void setNotificationsEnabled(final boolean notificationsEnabled) {
+        this.notificationsEnabled = notificationsEnabled;
     }
 }

@@ -35,8 +35,10 @@ import wtf.hmg.pki.csc.service.SharedAppService;
 import wtf.hmg.pki.csc.util.SupportUtils;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 import java.util.List;
 
@@ -69,7 +71,7 @@ public class DefaultSharedAppServiceTest {
 	private FilesService realFilesService;
 	
 	@BeforeClass
-	public static void init() throws IOException {
+	public static void init() throws IOException, URISyntaxException {
 		tempStoragePath = Files.createTempDirectory("csca");
 		TestPathHelper.initDummyAppsStructure(tempStoragePath);
 	}
@@ -226,9 +228,10 @@ public class DefaultSharedAppServiceTest {
 	}
 	
 	@Test
-	public void testAppFileAsResource() throws IOException {
+	public void testAppFileAsResource() throws IOException, URISyntaxException {
 		String dummyFilename = "app-withcert.crt.pem";
 		String appName = "app-withcert";
+		Path dummyCertFile = Paths.get(ClassLoader.getSystemResource("dummy.crt.pem").toURI());
 		
 		given(appConfig.getStoragePath()).willReturn(tempStoragePath);
 		given(supportUtils.normalizeFileName(dummyFilename)).willReturn(dummyFilename);
@@ -240,7 +243,7 @@ public class DefaultSharedAppServiceTest {
 		assertTrue(resource.isFile());
 		assertTrue(resource.exists());
 		assertNotNull(resource.getFile());
-		assertEquals("DUMMY-CRT", new String(Files.readAllBytes(resource.getFile().toPath())));
+		assertEquals(new String(Files.readAllBytes(dummyCertFile)), new String(Files.readAllBytes(resource.getFile().toPath())));
 		
 		verify(supportUtils, times(1)).normalizeFileName(dummyFilename);
 		verify(supportUtils, times(1)).normalizeFileName(appName);
@@ -330,6 +333,7 @@ public class DefaultSharedAppServiceTest {
 		assertNotNull(nocert.getKeyLastModified());
 		assertNotNull(nocert.getCsrLastModified());
 		assertNull(nocert.getCertLastModified());
+		assertNull(nocert.getCertValidTo());
 	}
 	
 	private void assertSharedAppOnlyKey(final SharedApp onlykey) {
@@ -341,6 +345,7 @@ public class DefaultSharedAppServiceTest {
 		assertNotNull(onlykey.getKeyLastModified());
 		assertNull(onlykey.getCsrLastModified());
 		assertNull(onlykey.getCertLastModified());
+		assertNull(onlykey.getCertValidTo());
 	}
 	
 	private void assertSharedAppWithCert(final SharedApp withcert) {
@@ -352,6 +357,7 @@ public class DefaultSharedAppServiceTest {
 		assertNotNull(withcert.getKeyLastModified());
 		assertNotNull(withcert.getCsrLastModified());
 		assertNotNull(withcert.getCertLastModified());
+		assertNotNull(withcert.getCertValidTo());
 	}
 	
 	private void assertSharedAppWithCertRenewRequest(final SharedApp withcertreneq) {
@@ -363,5 +369,6 @@ public class DefaultSharedAppServiceTest {
 		assertNotNull(withcertreneq.getKeyLastModified());
 		assertNotNull(withcertreneq.getCsrLastModified());
 		assertNotNull(withcertreneq.getCertLastModified());
+		assertNotNull(withcertreneq.getCertValidTo());
 	}
 }

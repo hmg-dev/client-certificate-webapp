@@ -57,7 +57,7 @@ public class DefaultCryptServiceTest {
     private SupportUtils supportUtils;
 
     @Before
-    public void setUp() throws IOException {
+    public void setUp() {
         appConfig = new AppConfig();
         appConfig.setCryptSalt(dummySalt);
         appConfig.setStoragePath(dummyStoragePath);

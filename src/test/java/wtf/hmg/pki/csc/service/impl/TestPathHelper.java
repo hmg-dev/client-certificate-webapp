@@ -22,8 +22,10 @@ package wtf.hmg.pki.csc.service.impl;
 import wtf.hmg.pki.csc.service.SharedAppService;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class TestPathHelper {
 
@@ -64,12 +66,13 @@ public class TestPathHelper {
         }
     }
     
-    public static void initDummyAppsStructure(final Path dummyStoragePath) throws IOException {
+    public static void initDummyAppsStructure(final Path dummyStoragePath) throws IOException, URISyntaxException {
         Path apps = dummyStoragePath.resolve(SharedAppService.SHARED_APPS_FOLDER);
         Path appNoCert = apps.resolve("app-nocert");
         Path appOnlyKey = apps.resolve("app-onlykey");
         Path appWithCert = apps.resolve("app-withcert");
         Path appWithCertRenewReq = apps.resolve("app-withcert-reneq");
+        Path dummyCertFile = Paths.get(ClassLoader.getSystemResource("dummy.crt.pem").toURI());
     
         Files.createDirectory(apps);
         Files.createDirectory(appNoCert);
@@ -77,15 +80,18 @@ public class TestPathHelper {
         Files.createDirectory(appWithCert);
         Files.createDirectory(appWithCertRenewReq);
     
+        Files.copy(dummyCertFile, appWithCert.resolve("app-withcert.crt.pem"));
+        Files.copy(dummyCertFile, appWithCertRenewReq.resolve("app-withcert-reneq.crt.pem"));
+        
         Files.write(appNoCert.resolve("app-nocert.key.pem"), "DUMMY-KEY".getBytes());
         Files.write(appNoCert.resolve("app-nocert.csr.pem"), "DUMMY-CSR".getBytes());
         Files.write(appOnlyKey.resolve("app-onlykey.key.pem"), "DUMMY-KEY".getBytes());
         Files.write(appWithCert.resolve("app-withcert.key.pem"), "DUMMY-KEY".getBytes());
         Files.write(appWithCert.resolve("app-withcert.csr.pem"), "DUMMY-CSR".getBytes());
-        Files.write(appWithCert.resolve("app-withcert.crt.pem"), "DUMMY-CRT".getBytes());
+        //Files.write(appWithCert.resolve("app-withcert.crt.pem"), "DUMMY-CRT".getBytes());
         Files.write(appWithCertRenewReq.resolve("app-withcert-reneq.key.pem"), "DUMMY-KEY".getBytes());
         Files.write(appWithCertRenewReq.resolve("app-withcert-reneq.csr.pem"), "DUMMY-CSR".getBytes());
-        Files.write(appWithCertRenewReq.resolve("app-withcert-reneq.crt.pem"), "DUMMY-CRT".getBytes());
+        //Files.write(appWithCertRenewReq.resolve("app-withcert-reneq.crt.pem"), "DUMMY-CRT".getBytes());
         Files.write(appWithCertRenewReq.resolve("app-withcert-reneq.crt.pem.reqrenew"), "Renew-Request".getBytes());
     }
 }

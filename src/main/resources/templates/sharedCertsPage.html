@@ -44,6 +44,7 @@
 			<th th:text="#{shared.certs.list.keyfilename}"></th>
 			<th th:text="#{shared.certs.list.csrfilename}"></th>
 			<th th:text="#{shared.certs.list.crtfilename}"></th>
+			<th th:text="#{shared.certs.list.crtvalidto}"></th>
 			<th th:text="#{shared.certs.list.actions}"></th>
 		</tr>
 		</thead>
@@ -74,6 +75,9 @@
 				</a>
 				<img th:if="${sa.isRenewalRequested()}" th:title="#{user.data.mycerts.renew.requested}" src="renew-request.png" th:width="15px" style="vertical-align: middle; margin-right: 3px;" /><br/>
 				<span th:if="${sa.getCertFile() != null}" th:text="${#temporals.format(sa.getCertLastModified(), 'dd-MM-yyyy HH:mm')}" class="shared-app-last-modified"></span>
+			</td>
+			<td th:class="${iterStat.odd}?'': 'alt'">
+				<span th:if="${sa.getCertFile() != null}" class="shared-app-crt-expires-at" th:text="${#temporals.format(sa.getCertValidTo(), 'dd-MM-yyyy HH:mm')}"></span>
 			</td>
 			<td th:class="${iterStat.odd}?'actions': 'alt actions'">
 				<form action="#" th:action="@{/requestAppRenew}" method="post" th:if="${!isAdmin && sa.getCertFile() != null && !sa.isRenewalRequested()}">

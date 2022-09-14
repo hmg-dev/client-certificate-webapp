@@ -20,6 +20,7 @@
 package wtf.hmg.pki.csc.util;
 
 import org.apache.commons.lang3.StringUtils;
+import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
@@ -32,6 +33,7 @@ import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.temporal.Temporal;
 
 public class CscUtils {
 
@@ -101,7 +103,7 @@ public class CscUtils {
     }
 
     public static String extractCSRInfo(final Path csrFile) {
-        try(PEMParser pp = new PEMParser(Files.newBufferedReader(csrFile));) {
+        try(PEMParser pp = new PEMParser(Files.newBufferedReader(csrFile))) {
             PKCS10CertificationRequest csr = (PKCS10CertificationRequest) pp.readObject();
             return csr.getSubject().toString();
         } catch (IOException|NullPointerException e) {
@@ -118,4 +120,13 @@ public class CscUtils {
         }
     }
     
+    public static Temporal extractCertValidToDate(final Path cert) {
+        try(PEMParser pp = new PEMParser(Files.newBufferedReader(cert))) {
+            X509CertificateHolder certDetails = (X509CertificateHolder) pp.readObject();
+            return certDetails.getNotAfter().toInstant();
+        } catch (IOException|NullPointerException e) {
+            log.error("Unable to parse Cert-Input file!", e);
+        }
+        return null;
+    }
 }

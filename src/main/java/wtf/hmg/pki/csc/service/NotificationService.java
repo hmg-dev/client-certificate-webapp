@@ -17,16 +17,10 @@
  You should have received a copy of the GNU General Public License
  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-package wtf.hmg.pki.csc;
+package wtf.hmg.pki.csc.service;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-@SpringBootApplication
-public class PkiWebclientApplication {
-
-	public static void main(String[] args) {
-		SpringApplication.run(PkiWebclientApplication.class, args);
-	}
-
+public interface NotificationService {
+	void sendNotificationAsync(String subject, String text);
+	
+	void sendNotification(String subject, String text);
 }

@@ -30,7 +30,7 @@ if [ ! -d "${workDir}" ]; then
 fi
 
 if [ ! -f "${workDir}/openssl.cnf.tmpl" ]; then
-  echoerr "Invalid working directory: ${workDir}}";
+  echoerr "Invalid working directory (missing config-template): ${workDir}";
   exit 1;
 fi
 

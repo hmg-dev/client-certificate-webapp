@@ -24,10 +24,13 @@ import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.transport.*;
 import org.eclipse.jgit.transport.sshd.SshdSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
@@ -41,6 +44,9 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Configuration
 @ComponentScan({"wtf.hmg.pki"})
@@ -49,7 +55,26 @@ public class WebclientSpringConfig implements WebMvcConfigurer {
 
     @Autowired
     private AppConfig appConfig;
-
+    
+    @Value("${spring.mail.host}")
+    private String mailServerHost;
+    
+    @Value("${spring.mail.port}")
+    private Integer mailServerPort;
+    
+    @Value("${spring.mail.username}")
+    private String mailServerUsername;
+    
+    @Value("${spring.mail.password}")
+    private String mailServerPassword;
+    
+    @Value("${spring.mail.properties.mail.smtp.starttls.enable}")
+    private String mailServerStartTls;
+    
+    @Value("${spring.mail.properties.mail.debug}")
+    private String mailDebug;
+    
+    
     @Bean
     public Java8TimeDialect java8TimeDialect() {
         return new Java8TimeDialect();
@@ -68,14 +93,38 @@ public class WebclientSpringConfig implements WebMvcConfigurer {
         lci.setParamName("lang");
         return lci;
     }
-
+    
+    @Bean
+    public JavaMailSender javaMailSender() {
+        JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
+        mailSender.setHost(mailServerHost);
+        mailSender.setPort(mailServerPort);
+        
+        mailSender.setUsername(mailServerUsername);
+        mailSender.setPassword(mailServerPassword);
+        
+        Properties props = mailSender.getJavaMailProperties();
+        props.put("mail.transport.protocol", "smtp");
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", mailServerStartTls);
+        props.put("mail.debug", mailDebug);
+        
+        return mailSender;
+    }
+    
+    @Bean
+    public ExecutorService executorService() {
+        return Executors.newFixedThreadPool(5);
+    }
+    
+    
     @Override
     public void addInterceptors(final InterceptorRegistry registry) {
         registry.addInterceptor(localeChangeInterceptor());
     }
 
     @Override
-    public void addViewControllers(ViewControllerRegistry registry) {
+    public void addViewControllers(final ViewControllerRegistry registry) {
         registry.addViewController("/login").setViewName("login");
         registry.addViewController("/error").setViewName("error");
     }
@@ -98,5 +147,29 @@ public class WebclientSpringConfig implements WebMvcConfigurer {
                 sshTransport.setSshSessionFactory( sshSessionFactory() );
             }
         };
+    }
+    
+    public void setMailServerHost(final String mailServerHost) {
+        this.mailServerHost = mailServerHost;
+    }
+    
+    public void setMailServerPort(final Integer mailServerPort) {
+        this.mailServerPort = mailServerPort;
+    }
+    
+    public void setMailServerUsername(final String mailServerUsername) {
+        this.mailServerUsername = mailServerUsername;
+    }
+    
+    public void setMailServerPassword(final String mailServerPassword) {
+        this.mailServerPassword = mailServerPassword;
+    }
+    
+    public void setMailServerStartTls(final String mailServerStartTls) {
+        this.mailServerStartTls = mailServerStartTls;
+    }
+    
+    public void setMailDebug(final String mailDebug) {
+        this.mailDebug = mailDebug;
     }
 }

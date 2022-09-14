@@ -31,10 +31,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Instant;
+import java.time.temporal.Temporal;
 
 import static org.junit.Assert.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CscUtilsTest {
@@ -114,7 +115,15 @@ public class CscUtilsTest {
         assertTrue(CscUtils.validateCSRString(new String(Files.readAllBytes(dummyCSR))));
         assertFalse(CscUtils.validateCSR(dummyInvalidCSR));
     }
-
+    
+    @Test
+    public void testValidateCSRForInvalidFile() {
+        Path dummyInvalidCSR = Paths.get("/invalid");
+        boolean result = CscUtils.validateCSR(dummyInvalidCSR);
+        
+        assertFalse(result);
+    }
+    
     @Test
     public void testextractCSRInfoForInvalidCsr() throws URISyntaxException {
         Path dummyInvalidCSR = Paths.get(ClassLoader.getSystemResource("logback-spring.xml").toURI());
@@ -140,5 +149,21 @@ public class CscUtilsTest {
         assertEquals("test.user", CscUtils.normalizeUserName("test.user"));
         assertEquals("test.user_hmg.wtf", CscUtils.normalizeUserName("test.user@hmg.wtf"));
     }
-
+    
+    @Test
+    public void testExtractCertValidToDateForInvalidCert() throws URISyntaxException {
+        Path dummyInvalidCert = Paths.get(ClassLoader.getSystemResource("logback-spring.xml").toURI());
+        Temporal result = CscUtils.extractCertValidToDate(dummyInvalidCert);
+        assertNull(result);
+    }
+    
+    @Test
+    public void testExtractCertValidToDate() throws URISyntaxException {
+        Temporal expectedResult = Instant.parse("2022-03-05T09:09:53.00Z");
+        Path dummyCert = Paths.get(ClassLoader.getSystemResource("dummy.crt.pem").toURI());
+        Temporal result = CscUtils.extractCertValidToDate(dummyCert);
+        
+        assertNotNull(result);
+        assertEquals(expectedResult, result);
+    }
 }

@@ -54,21 +54,21 @@ You (may) need to configure at least the following properties in that file and r
 ```properties
 data.cert-repo=ssh://git@your.git/cert/repository.git
 data.git-user-keyfile=/opt/config/ci-user-ssh.key
-spring.security.oauth2.client.registration.azure.client-authentication-method=post
-spring.security.oauth2.client.registration.azure.client-id=00000000-0000-0000-0000-000000000000
-spring.security.oauth2.client.registration.azure.client-secret=#{pki-web-aad-client-secret}#
 data.cert-revocation-list-path=/data/shared/crl.list
- 
+
+data.notification-sender=_REPLACEME_
+
+spring.mail.host=_REPLACEME_
+spring.mail.port=587
+spring.mail.username=_REPLACEME_
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.debug=false
+
 azure.activedirectory.tenant-id=00000000-0000-0000-0000-000000000000
 azure.activedirectory.user-group.allowed-groups=group1, group2, group3
-azure.activedirectory.active-directory-groups=group1, group2, group3
+#azure.activedirectory.client-id=00000000-0000-0000-0000-000000000000
+#azure.activedirectory.client-secret=#{pki-web-aad-client-secret}#
 azure.activedirectory.authority=https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/
- 
-spring.security.oauth2.client.provider.azure.authorization-uri=https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/oauth2/authorize
-spring.security.oauth2.client.provider.azure.token-uri=https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/oauth2/token
-spring.security.oauth2.client.provider.azure.user-info-uri=https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/openid/userinfo
-spring.security.oauth2.client.provider.azure.jwk-set-uri=https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/discovery/keys
-
 ```
 
 

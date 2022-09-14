@@ -28,6 +28,7 @@ public class SharedApp {
 	private final Temporal certLastModified;
 	private final Temporal keyLastModified;
 	private final Temporal csrLastModified;
+	private final Temporal certValidTo;
 	private final Path certFile;
 	private final Path keyFile;
 	private final Path csrFile;
@@ -39,6 +40,7 @@ public class SharedApp {
 		certLastModified = b.certLastModified;
 		keyLastModified = b.keyLastModified;
 		csrLastModified = b.csrLastModified;
+		certValidTo = b.certValidTo;
 		certFile = b.certFile;
 		keyFile = b.keyFile;
 		csrFile = b.csrFile;
@@ -60,6 +62,10 @@ public class SharedApp {
 	
 	public Temporal getCsrLastModified() {
 		return csrLastModified;
+	}
+	
+	public Temporal getCertValidTo() {
+		return certValidTo;
 	}
 	
 	public Path getCertFile() {
@@ -87,6 +93,7 @@ public class SharedApp {
 		private Temporal certLastModified;
 		private Temporal keyLastModified;
 		private Temporal csrLastModified;
+		private Temporal certValidTo;
 		private Path certFile;
 		private Path keyFile;
 		private Path csrFile;
@@ -114,6 +121,11 @@ public class SharedApp {
 		
 		public Builder setCsrLastModified(final Temporal csrLastModified) {
 			this.csrLastModified = csrLastModified;
+			return this;
+		}
+		
+		public Builder setCertValidTo(final Temporal certValidTo) {
+			this.certValidTo = certValidTo;
 			return this;
 		}
 		
