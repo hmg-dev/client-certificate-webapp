@@ -34,6 +34,8 @@ public class SharedApp {
 	private final Path csrFile;
 	private final boolean renewalRequested;
 	private final String csrInfo;
+	private final String teamName;
+	private final String teamContact;
 	
 	private SharedApp(final Builder b) {
 		name = b.name;
@@ -46,6 +48,8 @@ public class SharedApp {
 		csrFile = b.csrFile;
 		renewalRequested = b.renewalRequested;
 		csrInfo = b.csrInfo;
+		teamName = b.teamName;
+		teamContact = b.teamContact;
 	}
 	
 	public String getName() {
@@ -88,6 +92,14 @@ public class SharedApp {
 		return csrInfo;
 	}
 	
+	public String getTeamName() {
+		return teamName;
+	}
+	
+	public String getTeamContact() {
+		return teamContact;
+	}
+	
 	public static class Builder {
 		private String name;
 		private Temporal certLastModified;
@@ -99,6 +111,8 @@ public class SharedApp {
 		private Path csrFile;
 		private boolean renewalRequested;
 		private String csrInfo;
+		private String teamName;
+		private String teamContact;
 		
 		public SharedApp build() {
 			return new SharedApp(this);
@@ -151,6 +165,16 @@ public class SharedApp {
 		
 		public Builder setCsrInfo(final String csrInfo) {
 			this.csrInfo = csrInfo;
+			return this;
+		}
+		
+		public Builder setTeamName(final String teamName) {
+			this.teamName = teamName;
+			return this;
+		}
+		
+		public Builder setTeamContact(final String teamContact) {
+			this.teamContact = teamContact;
 			return this;
 		}
 	}

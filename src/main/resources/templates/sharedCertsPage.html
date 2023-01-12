@@ -28,8 +28,24 @@
 	<h2 th:text="#{shared.certs.create.headline}"></h2>
 
 	<form action="#" th:action="@{/createSharedApp}" method="post" class="shared-app-form">
-		<span th:text="#{shared.certs.create.label}"></span>
-		<input type="text" name="appName" class="app-name-field">
+		<fieldset>
+			<label th:for="appName">
+				[[#{shared.certs.create.label.name}]]
+				<input type="text" name="appName" class="app-name-field" id="appName">
+			</label>
+		</fieldset>
+		<fieldset>
+			<label th:for="teamName" class="optional-field">
+				[[#{shared.certs.create.label.team}]]
+				<input type="text" name="teamName" class="app-name-field" id="teamName">
+			</label>
+		</fieldset>
+		<fieldset>
+			<label th:for="teamContact" class="optional-field">
+				[[#{shared.certs.create.label.contact}]]
+				<input type="text" name="teamContact" class="app-name-field" id="teamContact">
+			</label>
+		</fieldset>
 		<input type="submit" id="create-shared-app" name="create-shared-app" th:value="#{shared.certs.create.button}" />
 	</form>
 </div>
@@ -45,12 +61,13 @@
 			<th th:text="#{shared.certs.list.csrfilename}"></th>
 			<th th:text="#{shared.certs.list.crtfilename}"></th>
 			<th th:text="#{shared.certs.list.crtvalidto}"></th>
+			<th th:text="#{shared.certs.list.teamname}"></th>
 			<th th:text="#{shared.certs.list.actions}"></th>
 		</tr>
 		</thead>
 		<tbody>
 		<tr th:if="${#lists.isEmpty(sharedApps)}">
-			<td th:colspan="6" th:text="#{shared.certs.list.nocerts}" class="no-requests"></td>
+			<td th:colspan="7" th:text="#{shared.certs.list.nocerts}" class="no-requests"></td>
 		</tr>
 		<tr th:each="sa,iterStat : ${sharedApps}">
 			<td th:class="${iterStat.odd}?'': 'alt'" th:text="${sa.getName()}"></td>
@@ -78,6 +95,10 @@
 			</td>
 			<td th:class="${iterStat.odd}?'': 'alt'">
 				<span th:if="${sa.getCertFile() != null}" class="shared-app-crt-expires-at" th:text="${#temporals.format(sa.getCertValidTo(), 'dd-MM-yyyy HH:mm')}"></span>
+			</td>
+			<td th:class="${iterStat.odd}?'': 'alt'">
+				<div th:text="${sa.getTeamName()}"></div>
+				<div th:text="${sa.getTeamContact()}" class="shared-app-team-contact"></div>
 			</td>
 			<td th:class="${iterStat.odd}?'actions': 'alt actions'">
 				<form action="#" th:action="@{/requestAppRenew}" method="post" th:if="${!isAdmin && sa.getCertFile() != null && !sa.isRenewalRequested()}">

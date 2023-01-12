@@ -111,7 +111,7 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		String dummyErrorMessage = "TEST - Invalid AppName";
 		given(messageSource.getMessage(eq("shared.certs.appname.invalid"), any(), eq(dummyLocale))).willReturn(dummyErrorMessage);
 		
-		String result = sut.createSharedApp(dummyAppName, dummyLocale, redirectAttributes);
+		String result = sut.createSharedApp(dummyAppName, null, null, dummyLocale, redirectAttributes);
 		assertEquals("redirect:/shared-certs", result);
 		
 		verify(messageSource, atLeastOnce()).getMessage(eq("shared.certs.appname.invalid"), any(), any(Locale.class));
@@ -127,31 +127,56 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		given(messageSource.getMessage(eq("shared.certs.creation.failed"), any(), eq(dummyLocale))).willReturn(dummyErrorMessage);
 		doThrow(new IOException("TEST")).when(sharedAppService).createAppKey(anyString());
 		
-		String result = sut.createSharedApp(dummyAppName, dummyLocale, redirectAttributes);
+		String result = sut.createSharedApp(dummyAppName, null, null, dummyLocale, redirectAttributes);
 		assertEquals("redirect:/shared-certs", result);
 		
 		verify(messageSource, atLeastOnce()).getMessage(eq("shared.certs.creation.failed"), any(), any(Locale.class));
 		verify(redirectAttributes, atLeastOnce()).addFlashAttribute("errorMessage", dummyErrorMessage);
 		verify(sharedAppService, times(1)).createAppKey(dummyAppName);
 		verify(sharedAppService, never()).createCSR(anyString(), anyString());
+		verify(sharedAppService, never()).createAppDetails(anyString(), anyString(), anyString());
+	}
+	
+	@Test
+	public void testCreateSharedApp_forInvalidContactMail() throws IOException {
+		String dummyAppName = "THE-App";
+		String dummyErrorMessage = "TEST - Error";
+		String dummyTeamContact = "team@contact.invalid";
+		
+		given(messageSource.getMessage(eq("shared.certs.contact.invalid"), any(), eq(dummyLocale))).willReturn(dummyErrorMessage);
+		
+		String result = sut.createSharedApp(dummyAppName, null, dummyTeamContact, dummyLocale, redirectAttributes);
+		assertEquals("redirect:/shared-certs", result);
+		
+		verify(messageSource, atLeastOnce()).getMessage(eq("shared.certs.contact.invalid"), any(), any(Locale.class));
+		verify(redirectAttributes, atLeastOnce()).addFlashAttribute("errorMessage", dummyErrorMessage);
+		verify(sharedAppService, times(1)).isValidEMail(dummyTeamContact);
+		verify(sharedAppService, never()).createAppKey(dummyAppName);
+		verify(sharedAppService, never()).createCSR(anyString(), anyString());
+		verify(sharedAppService, never()).createAppDetails(anyString(), anyString(), anyString());
 	}
 	
 	@Test
 	public void testCreateSharedApp() throws IOException {
 		String dummyAppName = "THE-App";
+		String dummyTeamName = "Team-Name";
+		String dummyTeamContact = "team@contact.local";
 		String dummyPassword = "Test-Password-123";
 		String dummySuccessMessage = "Test success";
 		
 		given(sharedAppService.createAppKey(dummyAppName)).willReturn(dummyPassword);
+		given(sharedAppService.isValidEMail(dummyTeamContact)).willReturn(true);
 		given(messageSource.getMessage(eq("shared.certs.creation.success"), any(), eq(dummyLocale))).willReturn(dummySuccessMessage);
 		
-		String result = sut.createSharedApp(dummyAppName, dummyLocale, redirectAttributes);
+		String result = sut.createSharedApp(dummyAppName, dummyTeamName, dummyTeamContact, dummyLocale, redirectAttributes);
 		assertEquals("redirect:/shared-certs", result);
 		
 		verify(messageSource, atLeastOnce()).getMessage(eq("shared.certs.creation.success"), any(), any(Locale.class));
 		verify(redirectAttributes, atLeastOnce()).addFlashAttribute("message", dummySuccessMessage);
+		verify(sharedAppService, times(1)).isValidEMail(dummyTeamContact);
 		verify(sharedAppService, times(1)).createAppKey(dummyAppName);
 		verify(sharedAppService, times(1)).createCSR(dummyAppName, dummyPassword);
+		verify(sharedAppService, times(1)).createAppDetails(dummyAppName, dummyTeamName, dummyTeamContact);
 	}
 	
 	@Test

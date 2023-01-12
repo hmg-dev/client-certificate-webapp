@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>wtf.hmg</groupId>
 	<artifactId>pki-web</artifactId>
-	<version>0.5.1-SNAPSHOT</version>
+	<version>0.6.0-SNAPSHOT</version>
 	<name>pki-web</name>
 	<description>Web-Application to manage PKI - mainly client-side-certificates</description>
 	
@@ -122,6 +122,11 @@
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
 			<version>2.8.0</version>
+		</dependency>
+		<dependency> <!-- Depends on commons-collections 3 (which is EOL) and is not compatible with cc4.x ...and there is no newer version of commons-validator either! -->
+			<groupId>commons-validator</groupId>
+			<artifactId>commons-validator</artifactId>
+			<version>1.7</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>

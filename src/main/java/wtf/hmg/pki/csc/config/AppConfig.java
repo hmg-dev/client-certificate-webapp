@@ -35,6 +35,7 @@ public class AppConfig {
     private Path certRevocationListPath;
     private Path scriptsPath;
     
+    private List<String> allowedMailSuffixes;
     private List<String> notificationRecipients;
     private String notificationSender;
     private boolean notificationsEnabled;
@@ -85,6 +86,14 @@ public class AppConfig {
     
     public void setScriptsPath(final Path scriptsPath) {
         this.scriptsPath = scriptsPath;
+    }
+    
+    public List<String> getAllowedMailSuffixes() {
+        return allowedMailSuffixes;
+    }
+    
+    public void setAllowedMailSuffixes(final List<String> allowedMailSuffixes) {
+        this.allowedMailSuffixes = allowedMailSuffixes;
     }
     
     public List<String> getNotificationRecipients() {

@@ -71,11 +71,16 @@ public class SharedCertsController extends AbstractCertificateController {
 	
 	@PostMapping("/createSharedApp")
 	@PreAuthorize("hasRole('PKI-Shared-App')")
-	public String createSharedApp(@RequestParam final String appName, final Locale locale,
-							   final RedirectAttributes redirectAttributes) {
+	public String createSharedApp(@RequestParam final String appName, @RequestParam final String teamName, @RequestParam final String teamContact, 
+								  final Locale locale, final RedirectAttributes redirectAttributes) {
 		if(!validateAppName(appName)) {
 			redirectAttributes.addFlashAttribute("errorMessage",
 					messageSource.getMessage("shared.certs.appname.invalid", null, locale));
+			return "redirect:/shared-certs";
+		}
+		if(StringUtils.isNotBlank(teamContact) && !sharedAppService.isValidEMail(teamContact)) {
+			redirectAttributes.addFlashAttribute("errorMessage",
+					messageSource.getMessage("shared.certs.contact.invalid", null, locale));
 			return "redirect:/shared-certs";
 		}
 		
@@ -83,6 +88,7 @@ public class SharedCertsController extends AbstractCertificateController {
 		try {
 			password = sharedAppService.createAppKey(appName);
 			sharedAppService.createCSR(appName, password);
+			sharedAppService.createAppDetails(appName, teamName, teamContact);
 		} catch (IOException | IllegalStateException e) {
 			redirectAttributes.addFlashAttribute("errorMessage",
 					messageSource.getMessage("shared.certs.creation.failed", new Object[]{e.getMessage()}, locale));

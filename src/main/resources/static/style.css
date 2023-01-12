@@ -137,13 +137,36 @@ hr {
     width: 120px;
 }
 
+.shared-app-form {
+    display: flex;
+    flex-direction: row;
+}
+
+.shared-app-form fieldset {
+    border: 1px solid #a7a7a7;
+    background-color: #f7f7ff;
+}
+
 .shared-app-form .app-name-field {
-    width: 150px;
+    width: 200px;
+}
+
+.shared-app-form .optional-field {
+    color: gray;
 }
 
 .shared-app-last-modified {
     color: gray;
     font-size: 0.8em;
+}
+
+.shared-app-team-contact {
+    color: gray;
+    font-style: italic;
+}
+
+#create-shared-app {
+    font-weight: bold;
 }
 
 #pending-requests .reject-form {

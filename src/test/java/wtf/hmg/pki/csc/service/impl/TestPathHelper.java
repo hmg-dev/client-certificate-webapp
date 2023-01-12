@@ -72,16 +72,20 @@ public class TestPathHelper {
         Path appOnlyKey = apps.resolve("app-onlykey");
         Path appWithCert = apps.resolve("app-withcert");
         Path appWithCertRenewReq = apps.resolve("app-withcert-reneq");
+        Path appWithTeamDetails = apps.resolve("app-withteam");
         Path dummyCertFile = Paths.get(ClassLoader.getSystemResource("dummy.crt.pem").toURI());
+        Path dummyTeamProperties = Paths.get(ClassLoader.getSystemResource("dummy.appdetails.properties").toURI());
     
         Files.createDirectory(apps);
         Files.createDirectory(appNoCert);
         Files.createDirectory(appOnlyKey);
         Files.createDirectory(appWithCert);
         Files.createDirectory(appWithCertRenewReq);
+        Files.createDirectory(appWithTeamDetails);
     
         Files.copy(dummyCertFile, appWithCert.resolve("app-withcert.crt.pem"));
         Files.copy(dummyCertFile, appWithCertRenewReq.resolve("app-withcert-reneq.crt.pem"));
+        Files.copy(dummyTeamProperties, appWithTeamDetails.resolve("appdetails.properties"));
         
         Files.write(appNoCert.resolve("app-nocert.key.pem"), "DUMMY-KEY".getBytes());
         Files.write(appNoCert.resolve("app-nocert.csr.pem"), "DUMMY-CSR".getBytes());

@@ -34,13 +34,16 @@ import wtf.hmg.pki.csc.service.FilesService;
 import wtf.hmg.pki.csc.service.SharedAppService;
 import wtf.hmg.pki.csc.util.SupportUtils;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -55,6 +58,7 @@ public class DefaultSharedAppServiceTest {
 	private String dummyName = "Test-Application";
 	private String dummyPassword = "Test123456App42";
 	private static Path tempStoragePath;
+	private static Path tempStoragePath2;
 	
 	@Mock
 	private Path dummyStoragePath;
@@ -73,12 +77,15 @@ public class DefaultSharedAppServiceTest {
 	@BeforeClass
 	public static void init() throws IOException, URISyntaxException {
 		tempStoragePath = Files.createTempDirectory("csca");
+		tempStoragePath2 = Files.createTempDirectory("csca2");
 		TestPathHelper.initDummyAppsStructure(tempStoragePath);
+		TestPathHelper.initDummyAppsStructure(tempStoragePath2);
 	}
 	
 	@AfterClass
 	public static void tearDown() throws IOException {
 		FileSystemUtils.deleteRecursively(tempStoragePath);
+		FileSystemUtils.deleteRecursively(tempStoragePath2);
 	}
 	
 	@Before
@@ -93,6 +100,21 @@ public class DefaultSharedAppServiceTest {
 		given(appConfig.getStoragePath()).willReturn(dummyStoragePath);
 		given(appConfig.getScriptsPath()).willReturn(dummyScriptsPath);
 		given(dummyStoragePath.resolve(SharedAppService.SHARED_APPS_FOLDER)).willReturn(dummyAppsPath);
+	}
+	
+	@Test
+	public void testIsValidEMail() {
+		given(appConfig.getAllowedMailSuffixes()).willReturn(Arrays.asList("@company.localdomain", "@extern.company.localdomain"));
+		
+		assertTrue(sut.isValidEMail("test.user@company.localdomain"));
+		assertTrue(sut.isValidEMail("test.user@extern.company.localdomain"));
+		
+		assertFalse(sut.isValidEMail("zort.narf@ey-hallo.localdomain"));
+		assertFalse(sut.isValidEMail("zort.narf_company.localdomain"));
+		assertFalse(sut.isValidEMail("zort.narf@company.localdomain@ey-hallo.localdomain"));
+		assertFalse(sut.isValidEMail("zort.narf@invalid"));
+		
+		verify(appConfig, atLeastOnce()).getAllowedMailSuffixes();
 	}
 	
 	@Test
@@ -137,6 +159,85 @@ public class DefaultSharedAppServiceTest {
 		verify(dummyScriptsPath, times(1)).resolve("gen-app-csr.sh");
 		verify(dummyStoragePath, times(1)).resolve(SharedAppService.SHARED_APPS_FOLDER);
 		verify(supportUtils, times(1)).runCommandLine(expectedDescription, expectedScript, expectedWorkDir, dummyName, dummyPassword);
+	}
+	
+	@Test
+	public void testCreateAppDetails_forEmptyInput() {
+		String dummyAppName = "app-withcert";
+		String dummyTeamName = "";
+		String dummyContact = null;
+		Path expectedDetailsFile = tempStoragePath.resolve(SharedAppService.SHARED_APPS_FOLDER).resolve(dummyAppName + "/appdetails.properties");
+		given(appConfig.getStoragePath()).willReturn(tempStoragePath);
+		
+		sut.createAppDetails(dummyAppName, dummyTeamName, dummyContact);
+		
+		assertFalse(Files.exists(expectedDetailsFile));
+		verify(appConfig, never()).getStoragePath();
+	}
+	
+	@Test
+	public void testCreateAppDetails_forTeamNameOnly() {
+		String dummyAppName = "app-withcert";
+		String dummyTeamName = "Team NARF & Zort";
+		String dummyContact = null;
+		Path expectedDetailsFile = tempStoragePath2.resolve(SharedAppService.SHARED_APPS_FOLDER).resolve(dummyAppName + "/appdetails.properties");
+		given(appConfig.getStoragePath()).willReturn(tempStoragePath2);
+		
+		sut.createAppDetails(dummyAppName, dummyTeamName, dummyContact);
+		
+		assertTrue(Files.exists(expectedDetailsFile));
+		Properties p = readProperties(expectedDetailsFile);
+		
+		assertEquals(dummyTeamName, p.getProperty("teamname"));
+		assertNull(p.getProperty("contact"));
+		
+		verify(appConfig, times(1)).getStoragePath();
+	}
+	
+	@Test
+	public void testCreateAppDetails_forContactOnly() {
+		String dummyAppName = "app-nocert";
+		String dummyTeamName = null;
+		String dummyContact = "team@narf.zort";
+		Path expectedDetailsFile = tempStoragePath2.resolve(SharedAppService.SHARED_APPS_FOLDER).resolve(dummyAppName + "/appdetails.properties");
+		given(appConfig.getStoragePath()).willReturn(tempStoragePath2);
+		
+		sut.createAppDetails(dummyAppName, dummyTeamName, dummyContact);
+		
+		assertTrue(Files.exists(expectedDetailsFile));
+		Properties p = readProperties(expectedDetailsFile);
+		
+		assertNull(p.getProperty("teamname"));
+		assertEquals(dummyContact, p.getProperty("contact"));
+		
+		verify(appConfig, times(1)).getStoragePath();
+	}
+	
+	@Test
+	public void testCreateAppDetails() {
+		String dummyAppName = "app-onlykey";
+		String dummyTeamName = "Team Näim";
+		String dummyContact = "team@narf.zort";
+		Path expectedDetailsFile = tempStoragePath2.resolve(SharedAppService.SHARED_APPS_FOLDER).resolve(dummyAppName + "/appdetails.properties");
+		given(appConfig.getStoragePath()).willReturn(tempStoragePath2);
+		
+		sut.createAppDetails(dummyAppName, dummyTeamName, dummyContact);
+		
+		assertTrue(Files.exists(expectedDetailsFile));
+		Properties p = readProperties(expectedDetailsFile);
+		
+		assertEquals(dummyTeamName, p.getProperty("teamname"));
+		assertEquals(dummyContact, p.getProperty("contact"));
+		
+		verify(appConfig, times(1)).getStoragePath();
+	}
+	
+	private Properties readProperties(final Path file) {
+		Properties p = new Properties();
+		try(BufferedReader r = Files.newBufferedReader(file)) {
+			p.load(r);
+		} catch (final IOException e) { /* empty by design */ }
+		return p;
 	}
 	
 	@Test
@@ -301,7 +402,7 @@ public class DefaultSharedAppServiceTest {
 		
 		List<SharedApp> result = sut.findSharedApps();
 		assertNotNull(result);
-		assertEquals(4, result.size());
+		assertEquals(5, result.size());
 		assertSharedAppResult(result);
 		
 		verify(appConfig, times(1)).getStoragePath();
@@ -312,16 +413,19 @@ public class DefaultSharedAppServiceTest {
 		assertNotNull(result.get(1));
 		assertNotNull(result.get(2));
 		assertNotNull(result.get(3));
+		assertNotNull(result.get(4));
 		
 		SharedApp nocert = result.get(0);
 		SharedApp onlykey = result.get(1);
 		SharedApp withcert = result.get(2);
 		SharedApp withcertreneq = result.get(3);
+		SharedApp withdetails = result.get(4);
 		
 		assertSharedAppNoCert(nocert);
 		assertSharedAppOnlyKey(onlykey);
 		assertSharedAppWithCert(withcert);
 		assertSharedAppWithCertRenewRequest(withcertreneq);
+		assertSharedAppWithDetails(withdetails);
 	}
 	
 	private void assertSharedAppNoCert(final SharedApp nocert) {
@@ -334,6 +438,8 @@ public class DefaultSharedAppServiceTest {
 		assertNotNull(nocert.getCsrLastModified());
 		assertNull(nocert.getCertLastModified());
 		assertNull(nocert.getCertValidTo());
+		assertNull(nocert.getTeamName());
+		assertNull(nocert.getTeamContact());
 	}
 	
 	private void assertSharedAppOnlyKey(final SharedApp onlykey) {
@@ -346,6 +452,8 @@ public class DefaultSharedAppServiceTest {
 		assertNull(onlykey.getCsrLastModified());
 		assertNull(onlykey.getCertLastModified());
 		assertNull(onlykey.getCertValidTo());
+		assertNull(onlykey.getTeamName());
+		assertNull(onlykey.getTeamContact());
 	}
 	
 	private void assertSharedAppWithCert(final SharedApp withcert) {
@@ -358,6 +466,8 @@ public class DefaultSharedAppServiceTest {
 		assertNotNull(withcert.getCsrLastModified());
 		assertNotNull(withcert.getCertLastModified());
 		assertNotNull(withcert.getCertValidTo());
+		assertNull(withcert.getTeamName());
+		assertNull(withcert.getTeamContact());
 	}
 	
 	private void assertSharedAppWithCertRenewRequest(final SharedApp withcertreneq) {
@@ -370,5 +480,21 @@ public class DefaultSharedAppServiceTest {
 		assertNotNull(withcertreneq.getCsrLastModified());
 		assertNotNull(withcertreneq.getCertLastModified());
 		assertNotNull(withcertreneq.getCertValidTo());
+		assertNull(withcertreneq.getTeamName());
+		assertNull(withcertreneq.getTeamContact());
+	}
+	
+	private void assertSharedAppWithDetails(final SharedApp withdetails) {
+		assertEquals("app-withteam", withdetails.getName());
+		assertNull(withdetails.getCertFile());
+		assertNull(withdetails.getCsrFile());
+		assertNull(withdetails.getKeyFile());
+		assertFalse(withdetails.isRenewalRequested());
+		assertNull(withdetails.getKeyLastModified());
+		assertNull(withdetails.getCsrLastModified());
+		assertNull(withdetails.getCertLastModified());
+		assertNull(withdetails.getCertValidTo());
+		assertEquals("Pinky & the Brain", withdetails.getTeamName());
+		assertEquals("pinky@narf.zort", withdetails.getTeamContact());
 	}
 }

@@ -29,9 +29,13 @@ import java.util.List;
 public interface SharedAppService {
 	String SHARED_APPS_FOLDER = "applications";
 	
+	boolean isValidEMail(String email);
+	
 	String createAppKey(String appName) throws IOException;
 	
 	void createCSR(String appName, String password) throws IOException;
+	
+	void createAppDetails(String appName, String teamName, String contact);
 	
 	Path findAppFileForFilename(String appName, String fileName);
 	

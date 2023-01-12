@@ -19,6 +19,8 @@
 */
 package wtf.hmg.pki.csc.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.validator.routines.EmailValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,12 +34,15 @@ import wtf.hmg.pki.csc.service.SharedAppService;
 import wtf.hmg.pki.csc.util.CscUtils;
 import wtf.hmg.pki.csc.util.SupportUtils;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 @Service
@@ -53,6 +58,16 @@ public class DefaultSharedAppService implements SharedAppService {
 	private AppConfig appConfig;
 	@Autowired
 	private FilesService filesService;
+	
+	private boolean allowLocalAsTLD = true;
+	
+	@Override
+	public boolean isValidEMail(final String email) {
+		if(!EmailValidator.getInstance(allowLocalAsTLD).isValid(email)) {
+			return false;
+		}
+		return appConfig.getAllowedMailSuffixes().stream().anyMatch(s -> StringUtils.endsWithIgnoreCase(email, s));
+	}
 	
 	@Override
 	public String createAppKey(final String appName) throws IOException {
@@ -73,6 +88,27 @@ public class DefaultSharedAppService implements SharedAppService {
 		
 		supportUtils.runCommandLine("Create application CSR", createKeyScript.toString(),
 				appsFolder.toString(), appName, password);
+	}
+	
+	@Override
+	public void createAppDetails(final String appName, final String teamName, final String contact) {
+		if(StringUtils.isBlank(teamName) && StringUtils.isBlank(contact)) {
+			return;
+		}
+		Properties p = new Properties();
+		if(teamName != null) {
+			p.put("teamname", teamName);
+		}
+		if(contact != null) {
+			p.put("contact", contact);
+		}
+		
+		Path detailsFile = appConfig.getStoragePath().resolve(SHARED_APPS_FOLDER).resolve(appName).resolve("appdetails.properties");
+		try(BufferedWriter w = Files.newBufferedWriter(detailsFile)) {
+			p.store(w, null);
+		} catch (final IOException e) {
+			log.warn("Unable to write app-details", e);
+		}
 	}
 	
 	@Override
@@ -136,6 +172,7 @@ public class DefaultSharedAppService implements SharedAppService {
 		Path csr = resolveIfExists(p, filename.toString() + ".csr.pem");
 		Path key = resolveIfExists(p, filename.toString() + ".key.pem");
 		Path reqrenew = resolveIfExists(p, filename.toString() + ".crt.pem.reqrenew");
+		Path details = resolveIfExists(p, "appdetails.properties");
 		
 		SharedApp.Builder b = new SharedApp.Builder();
 		b.setName(filename.toString());
@@ -157,8 +194,23 @@ public class DefaultSharedAppService implements SharedAppService {
 		if(reqrenew != null) {
 			b.setRenewalRequested(true);
 		}
+		if(details != null) {
+			readAppDetailsFromPropertiesIntoBuilder(b, details);
+		}
 		
 		return b.build();
+	}
+	
+	private void readAppDetailsFromPropertiesIntoBuilder(final SharedApp.Builder b, final Path details) {
+		Properties p = new Properties();
+		try(BufferedReader r = Files.newBufferedReader(details)) {
+			p.load(r);
+		} catch (final IOException e) {
+			log.warn("Unable to read APP-Details", e);
+		}
+		
+		b.setTeamName(p.getProperty("teamname"));
+		b.setTeamContact(p.getProperty("contact"));
 	}
 	
 	private Path resolveIfExists(final Path p, final String child) {
