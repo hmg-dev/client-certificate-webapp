@@ -5,19 +5,19 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.7.5</version>
+		<version>2.7.8</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>wtf.hmg</groupId>
 	<artifactId>pki-web</artifactId>
-	<version>0.6.0-SNAPSHOT</version>
+	<version>0.7.0-SNAPSHOT</version>
 	<name>pki-web</name>
 	<description>Web-Application to manage PKI - mainly client-side-certificates</description>
 	
 	<properties>
 		<java.version>11</java.version>
 		<azure.version>3.14.0</azure.version>
-		<spring-security.version>5.7.5</spring-security.version>
+		<spring-security.version>5.7.6</spring-security.version>
 	</properties>
 
 	<dependencies>

@@ -23,6 +23,7 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.mockito.Mock;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import wtf.hmg.pki.csc.service.CertificateService;
+import wtf.hmg.pki.csc.util.AuditLog;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -31,6 +32,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 public class AbstractCertificateControllerTest {
+	@Mock
+	protected AuditLog auditLog;
 	@Mock
 	protected CertificateService certificateService;
 	@Mock

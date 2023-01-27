@@ -78,6 +78,7 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 	@Before
 	public void setup() {
 		sut = new SharedCertsController();
+		sut.setAuditLog(auditLog);
 		sut.setSupportUtils(supportUtils);
 		sut.setMessageSource(messageSource);
 		sut.setSharedAppService(sharedAppService);
@@ -105,17 +106,19 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		testCreateSharedApp_forInvalidAppNameInternal("THE App!");
 		testCreateSharedApp_forInvalidAppNameInternal("THE App");
 		testCreateSharedApp_forInvalidAppNameInternal("THE-App?");
+		verifyNoInteractions(auditLog);
 	}
 	
 	private void testCreateSharedApp_forInvalidAppNameInternal(final String dummyAppName) {
 		String dummyErrorMessage = "TEST - Invalid AppName";
 		given(messageSource.getMessage(eq("shared.certs.appname.invalid"), any(), eq(dummyLocale))).willReturn(dummyErrorMessage);
 		
-		String result = sut.createSharedApp(dummyAppName, null, null, dummyLocale, redirectAttributes);
+		String result = sut.createSharedApp(dummyAppName, null, null, dummyLocale, redirectAttributes, auth);
 		assertEquals("redirect:/shared-certs", result);
 		
 		verify(messageSource, atLeastOnce()).getMessage(eq("shared.certs.appname.invalid"), any(), any(Locale.class));
 		verify(redirectAttributes, atLeastOnce()).addFlashAttribute("errorMessage", dummyErrorMessage);
+		verify(auth, atLeastOnce()).getPrincipal();
 		verifyNoInteractions(sharedAppService);
 	}
 	
@@ -127,7 +130,7 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		given(messageSource.getMessage(eq("shared.certs.creation.failed"), any(), eq(dummyLocale))).willReturn(dummyErrorMessage);
 		doThrow(new IOException("TEST")).when(sharedAppService).createAppKey(anyString());
 		
-		String result = sut.createSharedApp(dummyAppName, null, null, dummyLocale, redirectAttributes);
+		String result = sut.createSharedApp(dummyAppName, null, null, dummyLocale, redirectAttributes, auth);
 		assertEquals("redirect:/shared-certs", result);
 		
 		verify(messageSource, atLeastOnce()).getMessage(eq("shared.certs.creation.failed"), any(), any(Locale.class));
@@ -135,6 +138,8 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		verify(sharedAppService, times(1)).createAppKey(dummyAppName);
 		verify(sharedAppService, never()).createCSR(anyString(), anyString());
 		verify(sharedAppService, never()).createAppDetails(anyString(), anyString(), anyString());
+		verify(auth, atLeastOnce()).getPrincipal();
+		verifyNoInteractions(auditLog);
 	}
 	
 	@Test
@@ -145,7 +150,7 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		
 		given(messageSource.getMessage(eq("shared.certs.contact.invalid"), any(), eq(dummyLocale))).willReturn(dummyErrorMessage);
 		
-		String result = sut.createSharedApp(dummyAppName, null, dummyTeamContact, dummyLocale, redirectAttributes);
+		String result = sut.createSharedApp(dummyAppName, null, dummyTeamContact, dummyLocale, redirectAttributes, auth);
 		assertEquals("redirect:/shared-certs", result);
 		
 		verify(messageSource, atLeastOnce()).getMessage(eq("shared.certs.contact.invalid"), any(), any(Locale.class));
@@ -154,6 +159,8 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		verify(sharedAppService, never()).createAppKey(dummyAppName);
 		verify(sharedAppService, never()).createCSR(anyString(), anyString());
 		verify(sharedAppService, never()).createAppDetails(anyString(), anyString(), anyString());
+		verify(auth, atLeastOnce()).getPrincipal();
+		verifyNoInteractions(auditLog);
 	}
 	
 	@Test
@@ -164,11 +171,12 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		String dummyPassword = "Test-Password-123";
 		String dummySuccessMessage = "Test success";
 		
+		given(user.getName()).willReturn(adminName);
 		given(sharedAppService.createAppKey(dummyAppName)).willReturn(dummyPassword);
 		given(sharedAppService.isValidEMail(dummyTeamContact)).willReturn(true);
 		given(messageSource.getMessage(eq("shared.certs.creation.success"), any(), eq(dummyLocale))).willReturn(dummySuccessMessage);
 		
-		String result = sut.createSharedApp(dummyAppName, dummyTeamName, dummyTeamContact, dummyLocale, redirectAttributes);
+		String result = sut.createSharedApp(dummyAppName, dummyTeamName, dummyTeamContact, dummyLocale, redirectAttributes, auth);
 		assertEquals("redirect:/shared-certs", result);
 		
 		verify(messageSource, atLeastOnce()).getMessage(eq("shared.certs.creation.success"), any(), any(Locale.class));
@@ -177,6 +185,9 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		verify(sharedAppService, times(1)).createAppKey(dummyAppName);
 		verify(sharedAppService, times(1)).createCSR(dummyAppName, dummyPassword);
 		verify(sharedAppService, times(1)).createAppDetails(dummyAppName, dummyTeamName, dummyTeamContact);
+		verify(auth, atLeastOnce()).getPrincipal();
+		verify(user, times(1)).getName();
+		verify(auditLog, times(1)).logCreatedSharedApp(adminName, dummyAppName, dummyTeamName);
 	}
 	
 	@Test
@@ -187,6 +198,7 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		assertEquals("redirect:/shared-certs", result);
 		
 		verifyLockedBehaviour();
+		verifyNoInteractions(auditLog);
 	}
 	
 	@Test
@@ -200,6 +212,7 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		verifyErrorBehaviour();
 		verify(certificateService, times(1)).cleanupWorkingFiles();
 		verify(certificateService, times(1)).cloneCertificateRepository();
+		verifyNoInteractions(auditLog);
 	}
 	
 	@Test
@@ -217,6 +230,7 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		verify(lock, times(1)).tryLock();
 		verify(lock, times(1)).unlock();
 		verifyPrepareWorkspace();
+		verify(auditLog, times(1)).logSignedSharedAppCSR(adminName, dummyAppName);
 		verify(certificateService, times(1)).copyAppCSRToRepository(dummyAppName, dummyCSRFileName);
 		verify(cryptService, times(1)).signCertificateRequest(csrRepoFile, dummyServerKeyPassword);
 		verify(certificateService, times(1)).copyCertificateToAppDirectory(dummyAppName, certFile);
@@ -276,12 +290,13 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		String errorMessage = "Dummy Error Message invalid file!";
 		given(messageSource.getMessage(eq("shared.certs.request.renew.cert.invalid"), any(), eq(dummyLocale))).willReturn(errorMessage);
 		
-		String result = sut.requestAppRenew("test-app", "INVALID", dummyLocale, redirectAttributes);
+		String result = sut.requestAppRenew("test-app", "INVALID", dummyLocale, redirectAttributes, auth);
 		assertNotNull(result);
 		assertEquals("redirect:/shared-certs", result);
 		
 		verify(redirectAttributes, atLeastOnce()).addFlashAttribute("errorMessage", errorMessage);
 		verify(sharedAppService, never()).requestRenewalForCert(anyString(), anyString());
+		verifyNoInteractions(auditLog, auth);
 	}
 	
 	@Test
@@ -290,26 +305,33 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		given(messageSource.getMessage(eq("shared.certs.request.renew.error"), any(), eq(dummyLocale))).willReturn(errorMessage);
 		doThrow(new IOException("TEST ERROR")).when(sharedAppService).requestRenewalForCert(anyString(), anyString());
 		
-		String result = sut.requestAppRenew("test-app", "test-app.crt.pem", dummyLocale, redirectAttributes);
+		String result = sut.requestAppRenew("test-app", "test-app.crt.pem", dummyLocale, redirectAttributes, auth);
 		assertNotNull(result);
 		assertEquals("redirect:/shared-certs", result);
 		
 		verify(redirectAttributes, atLeastOnce()).addFlashAttribute("errorMessage", errorMessage);
 		verify(sharedAppService, times(1)).requestRenewalForCert(anyString(), anyString());
+		verify(auth, atLeastOnce()).getPrincipal();
+		verifyNoInteractions(auditLog);
 	}
 	
 	@Test
 	public void testRequestRenew() throws IOException {
 		String message = "Dummy Success Message!";
+		String testAppName = "test-app";
+		given(user.getName()).willReturn(adminName);
 		given(messageSource.getMessage(eq("shared.certs.request.renew.success"), any(), eq(dummyLocale))).willReturn(message);
 		
-		String result = sut.requestAppRenew("test-app", "test-app.crt.pem", dummyLocale, redirectAttributes);
+		String result = sut.requestAppRenew(testAppName, "test-app.crt.pem", dummyLocale, redirectAttributes, auth);
 		assertNotNull(result);
 		assertEquals("redirect:/shared-certs", result);
 		
 		verify(redirectAttributes, atLeastOnce()).addFlashAttribute("message", message);
 		verify(redirectAttributes, never()).addFlashAttribute(eq("errorMessage"), anyString());
 		verify(sharedAppService, times(1)).requestRenewalForCert(anyString(), anyString());
+		verify(auth, atLeastOnce()).getPrincipal();
+		verify(user, times(1)).getName();
+		verify(auditLog, times(1)).logRequestedSharedAppRenewal(adminName, testAppName);
 	}
 	
 	@Test
@@ -320,6 +342,7 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		assertEquals("redirect:/shared-certs", result);
 		
 		verifyLockedBehaviour();
+		verifyNoInteractions(auditLog);
 	}
 	
 	@Test
@@ -332,6 +355,7 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		
 		verifyErrorBehaviour();
 		verify(certificateService, times(1)).cloneCertificateRepository();
+		verifyNoInteractions(auditLog);
 	}
 	
 	@Test
@@ -363,6 +387,7 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		verify(certificateService, times(1)).encryptWorkingFiles(cryptPassword);
 		verify(certificateService, times(1)).commitAndPushChanges(adminName, "Renewed App-Certificate");
 		verify(redirectAttributes, times(1)).addFlashAttribute(eq("message"), anyString());
+		verify(auditLog, times(1)).logRenewedSharedAppCert(adminName, dummyAppName);
 	}
 	
 	@Test
@@ -373,6 +398,7 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		assertEquals("redirect:/shared-certs", result);
 		
 		verifyLockedBehaviour();
+		verifyNoInteractions(auditLog);
 	}
 	
 	@Test
@@ -385,6 +411,7 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		
 		verifyErrorBehaviour();
 		verify(certificateService, times(1)).cloneCertificateRepository();
+		verifyNoInteractions(auditLog);
 	}
 	
 	@Test
@@ -407,6 +434,7 @@ public class SharedCertsControllerTest extends AbstractCertificateControllerTest
 		verify(certificateService, times(1)).encryptWorkingFiles(cryptPassword);
 		verify(certificateService, times(1)).commitAndPushChanges(adminName, "Revoked App-Certificate");
 		verify(redirectAttributes, times(1)).addFlashAttribute(eq("message"), anyString());
+		verify(auditLog, times(1)).logRevokedSharedAppCert(adminName, dummyAppName);
 	}
 	
 	private void verifyLockedBehaviour() {

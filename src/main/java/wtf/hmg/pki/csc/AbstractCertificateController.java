@@ -22,12 +22,15 @@ package wtf.hmg.pki.csc;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.beans.factory.annotation.Autowired;
 import wtf.hmg.pki.csc.service.CertificateService;
+import wtf.hmg.pki.csc.util.AuditLog;
 
 import java.io.IOException;
 
 public abstract class AbstractCertificateController {
 	@Autowired
 	protected CertificateService certificateService;
+	@Autowired
+	protected AuditLog auditLog;
 	
 	protected void prepareWorkspace(final String cryptPassword) throws IOException, GitAPIException {
 		certificateService.cleanupWorkingFiles();
@@ -42,5 +45,9 @@ public abstract class AbstractCertificateController {
 	
 	public void setCertificateService(final CertificateService certificateService) {
 		this.certificateService = certificateService;
+	}
+	
+	public void setAuditLog(final AuditLog auditLog) {
+		this.auditLog = auditLog;
 	}
 }

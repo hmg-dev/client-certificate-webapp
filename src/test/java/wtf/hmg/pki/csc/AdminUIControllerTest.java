@@ -73,6 +73,7 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
     public void setUp() {
         sut = new AdminUIController();
         sut.setAdminDataService(adminDataService);
+        sut.setAuditLog(auditLog);
         sut.setCertificateService(certificateService);
         sut.setCryptService(cryptService);
         AdminUIController.setLock(lock);
@@ -110,24 +111,33 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
         String userName = "userName";
         doThrow(new IOException("TEST")).when(adminDataService).rejectUserCSR(anyString(), anyString());
 
-        String result = sut.rejectUserCSR(userName, fileName, redirectAttributes);
+        String result = sut.rejectUserCSR(userName, fileName, redirectAttributes, auth);
 
         assertNotNull(result);
         assertEquals("redirect:/admin", result);
 
         verify(adminDataService, times(1)).rejectUserCSR(userName, fileName);
+        verify(auth, atLeastOnce()).getPrincipal();
         verify(redirectAttributes, times(1)).addFlashAttribute(eq("errorMessage"), anyString());
+        verifyNoInteractions(auditLog);
     }
 
     @Test
     public void testRejectUserCSR() throws IOException {
         String userName = "userName";
-        String result = sut.rejectUserCSR(userName, fileName, redirectAttributes);
-
+    
+        given(auth.getPrincipal()).willReturn(user);
+        given(user.getName()).willReturn(adminName);
+        
+        String result = sut.rejectUserCSR(userName, fileName, redirectAttributes, auth);
+        
         assertNotNull(result);
         assertEquals("redirect:/admin", result);
 
         verify(adminDataService, times(1)).rejectUserCSR(userName, fileName);
+        verify(auditLog, times(1)).logRejectedCSR(adminName, fileName, userName);
+        verify(auth, atLeastOnce()).getPrincipal();
+        verify(user, atLeastOnce()).getName();
         verify(redirectAttributes, never()).addFlashAttribute(eq("errorMessage"), anyString());
         verify(redirectAttributes, times(1)).addFlashAttribute(eq("message"), anyString());
     }
@@ -145,6 +155,7 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
         verify(certificateService, times(1)).cleanupWorkingFiles();
         verify(certificateService, times(1)).cloneCertificateRepository();
         verify(redirectAttributes, times(1)).addFlashAttribute(eq("errorMessage"), anyString());
+        verifyNoInteractions(auditLog);
     }
 
     @Test
@@ -160,6 +171,7 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
         verify(certificateService, times(1)).cleanupWorkingFiles();
         verify(certificateService, times(1)).cloneCertificateRepository();
         verify(redirectAttributes, times(1)).addFlashAttribute(eq("errorMessage"), anyString());
+        verifyNoInteractions(auditLog);
     }
 
     @Test
@@ -177,6 +189,7 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
 
         verify(redirectAttributes, times(1)).addFlashAttribute(eq("errorMessage"), anyString());
         verify(redirectAttributes, never()).addFlashAttribute(eq("message"), anyString());
+        verifyNoInteractions(auditLog);
     }
 
     @Test
@@ -197,6 +210,7 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
         verify(certificateService, times(1)).copyCertificateToUserDirectory(expectedUsername, certFile);
         verify(certificateService, times(1)).encryptWorkingFiles(cryptPassword);
         verify(adminDataService, times(1)).acceptUserCSR(expectedUsername, fileName);
+        verify(auditLog, times(1)).logSignedCSR(adminName, fileName, userName);
         verify(auth, atLeastOnce()).getPrincipal();
         verify(user, times(1)).getName();
         verify(certificateService, times(1)).commitAndPushChanges(adminName, "Signed User-Certificate");
@@ -219,6 +233,7 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
         verify(certificateService, times(1)).cloneCertificateRepository();
         verify(redirectAttributes, times(1)).addFlashAttribute(eq("errorMessage"), anyString());
         verify(lock, times(1)).unlock();
+        verifyNoInteractions(auditLog);
     }
     
     @Test
@@ -235,6 +250,7 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
     
         verify(redirectAttributes, times(1)).addFlashAttribute(eq("errorMessage"), anyString());
         verify(redirectAttributes, never()).addFlashAttribute(eq("message"), anyString());
+        verifyNoInteractions(auditLog);
     }
     
     @Test
@@ -255,6 +271,7 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
         verify(user, times(1)).getName();
         verifyPrepareWorkspace();
         verify(adminDataService, times(1)).findUserCertForRequest(expectedUsername, fileName);
+        verify(auditLog, times(1)).logRenewedCert(adminName, fileName, userName);
         verify(cryptService, times(1)).revokeCertificate(certFile, keyPassword);
         verify(adminDataService, times(1)).flagRevokedUserCert(expectedUsername, fileName);
         verify(adminDataService, times(1)).findAcceptedCSR(expectedUsername, fileName);
@@ -278,6 +295,7 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
         verify(certificateService, times(1)).cleanupWorkingFiles();
         verify(certificateService, times(1)).cloneCertificateRepository();
         verify(redirectAttributes, times(1)).addFlashAttribute(eq("errorMessage"), anyString());
+        verifyNoInteractions(auditLog);
     }
 
     @Test
@@ -294,6 +312,7 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
 
         verify(redirectAttributes, times(1)).addFlashAttribute(eq("errorMessage"), anyString());
         verify(redirectAttributes, never()).addFlashAttribute(eq("message"), anyString());
+        verifyNoInteractions(auditLog);
     }
 
     @Test
@@ -314,6 +333,7 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
 
         verify(redirectAttributes, times(1)).addFlashAttribute(eq("errorMessage"), anyString());
         verify(redirectAttributes, never()).addFlashAttribute(eq("message"), anyString());
+        verifyNoInteractions(auditLog);
     }
 
     @Test
@@ -330,6 +350,7 @@ public class AdminUIControllerTest extends AbstractCertificateControllerTest {
         verify(lock, times(1)).unlock();
         verifyPrepareWorkspace();
         verify(adminDataService, times(1)).findUserCertForRequest(expectedUsername, fileName);
+        verify(auditLog, times(1)).logRevokedCert(adminName, fileName, userName);
         verify(cryptService, times(1)).revokeCertificate(certFile, keyPassword);
         verify(adminDataService, times(1)).flagRevokedUserCertAndCSR(expectedUsername, fileName);
         verify(certificateService, times(1)).encryptWorkingFiles(cryptPassword);

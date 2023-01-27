@@ -72,7 +72,8 @@ public class SharedCertsController extends AbstractCertificateController {
 	@PostMapping("/createSharedApp")
 	@PreAuthorize("hasRole('PKI-Shared-App')")
 	public String createSharedApp(@RequestParam final String appName, @RequestParam final String teamName, @RequestParam final String teamContact, 
-								  final Locale locale, final RedirectAttributes redirectAttributes) {
+								  final Locale locale, final RedirectAttributes redirectAttributes, final OAuth2AuthenticationToken auth) {
+		String operatingUser = auth.getPrincipal().getName();
 		if(!validateAppName(appName)) {
 			redirectAttributes.addFlashAttribute("errorMessage",
 					messageSource.getMessage("shared.certs.appname.invalid", null, locale));
@@ -95,6 +96,7 @@ public class SharedCertsController extends AbstractCertificateController {
 			return "redirect:/shared-certs";
 		}
 		
+		auditLog.logCreatedSharedApp(operatingUser, appName, teamName);
 		redirectAttributes.addFlashAttribute("message",
 				messageSource.getMessage("shared.certs.creation.success", new Object[]{password}, locale));
 		
@@ -118,6 +120,7 @@ public class SharedCertsController extends AbstractCertificateController {
 			certificateService.copyCertificateToAppDirectory(appName, certFile);
 			finishWorkspace(cryptPassword, operatingUser, "Signed App-Certificate");
 			redirectAttributes.addFlashAttribute("message", "Certificate has been signed successfully!");
+			auditLog.logSignedSharedAppCSR(operatingUser, appName);
 		} catch (GitAPIException|IOException|IllegalStateException e) {
 			log.error("Unable to sign App-CSR!", e);
 			redirectAttributes.addFlashAttribute("errorMessage", 
@@ -155,17 +158,19 @@ public class SharedCertsController extends AbstractCertificateController {
 	@PostMapping("/requestAppRenew")
 	@PreAuthorize("hasRole('PKI-Shared-App')")
 	public String requestAppRenew(@RequestParam final String appName, @RequestParam final String fileName,
-								  final Locale locale, final RedirectAttributes redirectAttributes) {
+								  final Locale locale, final RedirectAttributes redirectAttributes, final OAuth2AuthenticationToken auth) {
 		if(fileName == null || !CscUtils.isValidCSRFileName(fileName)) {
 			redirectAttributes.addFlashAttribute("errorMessage",
 					messageSource.getMessage("shared.certs.request.renew.cert.invalid", new Object[]{fileName}, locale));
 			return "redirect:/shared-certs";
 		}
 		
+		String operatingUser = auth.getPrincipal().getName();
 		try {
 			sharedAppService.requestRenewalForCert(appName, fileName);
 			redirectAttributes.addFlashAttribute("message",
 					messageSource.getMessage("shared.certs.request.renew.success", null, locale));
+			auditLog.logRequestedSharedAppRenewal(operatingUser, appName);
 		} catch (IOException e) {
 			log.info("Failed User-Interaction 'requestRenew': ", e);
 			redirectAttributes.addFlashAttribute("errorMessage",
@@ -199,6 +204,7 @@ public class SharedCertsController extends AbstractCertificateController {
 			
 			finishWorkspace(cryptPassword, operatingUser, "Renewed App-Certificate");
 			redirectAttributes.addFlashAttribute("message", "Certificate has been successfully renewed!");
+			auditLog.logRenewedSharedAppCert(operatingUser, appName);
 		} catch (GitAPIException|IOException|IllegalStateException e) {
 			log.error("Unable to sign App-CSR!", e);
 			redirectAttributes.addFlashAttribute("errorMessage",
@@ -228,6 +234,7 @@ public class SharedCertsController extends AbstractCertificateController {
 			// TODO support deleting the whole app
 			finishWorkspace(cryptPassword, operatingUser, "Revoked App-Certificate");
 			redirectAttributes.addFlashAttribute("message", "Certificate has been successfully revoked!");
+			auditLog.logRevokedSharedAppCert(operatingUser, appName);
 		} catch (GitAPIException|IOException|IllegalStateException e) {
 			log.error("Unable to sign App-CSR!", e);
 			redirectAttributes.addFlashAttribute("errorMessage",

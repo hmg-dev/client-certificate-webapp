@@ -73,10 +73,12 @@ public class AdminUIController extends AbstractCertificateController {
     @PreAuthorize("hasRole('DevOps')")
     public String rejectUserCSR(@RequestParam("userName") final String userName,
                                 @RequestParam("fileName") final String fileName,
-                                final RedirectAttributes redirectAttributes) {
+                                final RedirectAttributes redirectAttributes, final OAuth2AuthenticationToken auth) {
+        String operatingUser = auth.getPrincipal().getName();
         try {
             adminDataService.rejectUserCSR(CscUtils.normalizeUserName(userName), fileName);
             redirectAttributes.addFlashAttribute("message", "CSR successfully rejected!");
+            auditLog.logRejectedCSR(operatingUser, fileName, userName);
         } catch (IOException e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Unable to execute reject-operation! Error was: " + e.getMessage());
         }
@@ -99,6 +101,7 @@ public class AdminUIController extends AbstractCertificateController {
         try {
             signCertificateRequest(CscUtils.normalizeUserName(userName), fileName, cryptPassword, keyPassword, operatingUser);
             redirectAttributes.addFlashAttribute("message", "Certificate has been signed successfully!");
+            auditLog.logSignedCSR(operatingUser, fileName, userName);
         } catch (GitAPIException|IOException|IllegalStateException e) {
             log.error("Unable to sign CSR!", e);
             redirectAttributes.addFlashAttribute("errorMessage", "Something went horribly wrong! Unable to execute sign-operation! Error was: " + e.getMessage());
@@ -146,6 +149,7 @@ public class AdminUIController extends AbstractCertificateController {
             certificateService.commitAndPushChanges(operatingUser, "Renew User-Certificate");
     
             redirectAttributes.addFlashAttribute("message", "Certificate has been successfully renewed!");
+            auditLog.logRenewedCert(operatingUser, fileName, userName);
         } catch (GitAPIException | IOException | IllegalStateException e) {
             log.error("Unable to renew certificate!", e);
             redirectAttributes.addFlashAttribute("errorMessage", "Something went horribly wrong! Unable to execute RENEW-operation! Error was: " + e.getMessage());
@@ -173,6 +177,7 @@ public class AdminUIController extends AbstractCertificateController {
             adminDataService.flagRevokedUserCertAndCSR(CscUtils.normalizeUserName(userName), fileName);
             finishWorkspace(cryptPassword, operatingUser, "Revoked User-Certificate");
             redirectAttributes.addFlashAttribute("message", "Certificate has been successfully revoked!");
+            auditLog.logRevokedCert(operatingUser, fileName, userName);
         } catch (GitAPIException | IOException | IllegalStateException e) {
             log.error("Unable to revoke CSR!", e);
             redirectAttributes.addFlashAttribute("errorMessage", "Something went horribly wrong! Unable to execute REVOKE-operation! Error was: " + e.getMessage());
